@@ -1,0 +1,114 @@
+
+.fields {
+    fill:#005555;
+    stroke:#000000;
+    stroke-width:1;
+}
+.fields:hover {
+    fill:#22FF77;
+}
+.forest {
+    fill:#229933;
+    stroke:#000000;
+    stroke-width:1;
+}
+.forest:hover {
+    fill:#22FF77;
+}
+.pasture {
+    fill:#FFD700;
+    stroke:#000000;
+    stroke-width:1;
+}
+.pasture:hover {
+    fill:#22FF77;
+}
+.hills {
+    fill:#8E2323;
+    stroke:#000000;
+    stroke-width:1;
+}
+.hills:hover {
+    fill:#22FF77;
+}
+.mountains {
+    fill:#cccccc;
+    stroke:#000000;
+    stroke-width:1
+}
+.mountains:hover {
+    fill:rgba(204,255,204,1);
+}
+.desert {
+    fill:#fafad2;
+    stroke:#000000;
+    stroke-width:1
+}
+.desert:hover {
+    fill:#22FF77;               
+}
+
+.edge {
+    fill:rgba(0,0,0,0);
+    stroke:rgba(0,0,0,0);
+    stroke-width:1;
+}
+
+.edge:hover {
+    fill:rgba(0,255,0,0.5);
+    stroke:#00ff00;
+    stroke-width:1;
+}
+.vertex {
+    fill:rgba(0,0,0,0);
+    stroke:rgba(0,0,0,0);
+    stroke-width:1;
+}
+.vertex:hover {
+    fill:rgba(0,255,0,0.5);
+    stroke:#00ffff;
+    stroke-width:1;
+}
+
+.player-red {
+    fill:rgb(255,0,0);
+    stroke:#000000;
+    stroke-width:1;
+}
+.player-green {
+    fill:rgb(0,255,0);
+    stroke:#000000;
+    stroke-width:1;
+}
+.player-blue {
+    fill:rgb(0,0,255);
+    stroke:#000000;
+    stroke-width:1;
+}
+.player-orange {
+    fill:rgb(255,100,100);
+    stroke:#000000;
+    stroke-width:1;
+}
+.player-white {
+    fill:rgb(240,240,240);
+    stroke:#000000;
+    stroke-width:1;
+}
+.player-brown {
+    fill:rgb(150,50,150);
+    stroke:#000000;
+    stroke-width:1;
+}
+
+.player {
+    display:block;
+    width:250px;
+}
+
+.player-score, .player-name, .player-resource-count, .player-bonus-count, .player-resources, .player-bonuses {
+    display:block;
+    width:100%;
+}
+
+

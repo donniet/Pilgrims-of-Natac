@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html 
+      PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+      "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" 
+      xmlns:svg="http://www.w3.org/2000/svg"
+      xmlns:xlink="http://www.w3.org/1999/xlink"> 
+<head>
+<link type="text/css" rel="stylesheet" href="/static/game.css"></link>
+<!-- <script type="text/javascript" src="/static/json.js"></script> -->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript" src="/static/event.js"></script>
+<script type="text/javascript" src="/static/player.js"></script>
+<script type="text/javascript" src="/static/board.js"></script>
+<script type="text/javascript" src="/_ah/channel/jsapi"></script>
+<script type="text/javascript">//<![CDATA[
+
+function getCookie(name) {
+    var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
+    return r ? r[1] : undefined;
+}
+
+jQuery.postJSON = function(url, args, callback) {
+    args._xsrf = getCookie("_xsrf");
+    $.ajax({url: url, data: $.param(args), dataType: "text", type: "POST",
+            success: function(response) {
+        if (callback) callback(eval("(" + response + ")"));
+    }, error: function(response) {
+        console.log("ERROR:", response)
+    }});
+};
+
+var player1 = new Player();
+player1.score_ = 7;
+player1.name_ = "Donnie";
+player1.image_ = "";
+player1.resourceCount_ = 4;
+player1.bonusCount_ = 2;
+player1.color_ = "#FF0000";
+player1.colorName_ = "Red";
+player1.active_ = false;
+player1.isLocal_ = true;
+player1.resources_ = [{resourceName_: "Ore"}, {resourceName_: "Ore"}, {resourceName_: "Grain"}, {resourceName_: "Wood"}];
+player1.bonuses_ = [{bonusName_: "Monopoly"}, {bonusName_: "Soldier"}];
+
+function getBoard(board) {
+    jQuery.getJSON("/currentBoard", function(data) {
+        board.loadJSON(data);
+        svg = document.getElementById("board");
+        while(svg.firstChild) svg.removeChild(svg.firstChild);
+        board.renderBoard(svg);
+    });
+}
+
+function loadBoard() {
+    
+    var channel = new goog.appengine.Channel('{{ token}}');
+    var socket = channel.open();
+    var connected = false;
+             
+    var board = new Board();
+    
+    
+    board.setModelElement("settlement", document.getElementById("settlement-model"), {x:15, y:15});
+    board.setModelElement("city", document.getElementById("city-model"), {x:25, y:15});
+    
+    
+    socket.onopen = function() {
+        connected = true;
+        getBoard(board);
+    };
+    socket.onmessage = function(msg) {
+        message = JSON.parse(msg.data);
+        //TODO: get real json to work
+        //message = eval(msg);
+        switch(message["action"]) {
+        case "reset":
+            getBoard(board);
+            break;
+        case "placeSettlement":
+            board.placeSettlement(message["x"], message["y"], message["color"]);
+            break;
+        case "placeCity":
+            board.placeCity(message["x"], message["y"], message["color"]);
+            break;
+        }
+        
+    }
+    socket.onerror = function() {}
+    socket.onclose = function() {
+        connected = false;
+        console.log("disconnected.");
+    };
+    
+    board.addListener("hexclick", function(hex) { alert("hexclick: " + hex.hexType_); });
+    board.addListener("vertexclick", function(vertex) {
+        var action = "placeSettlement";
+        console.log("vertex.vertexDevelopments_.length: " +vertex.vertexDevelopments_.length)
+        if(vertex.vertexDevelopments_.length > 0 && vertex.vertexDevelopments_[0].model == "settlement") action = "placeCity";
+        
+        console.log("action: " + action);
+                                                                
+        jQuery.postJSON("/action", {action:action, data:"{\"x\":"+vertex.position_.x+",\"y\":"+vertex.position_.y+"}"}, function(ret){
+            //alert(ret);
+        });
+    });
+    /*
+    board.addListener("edgeclick", function(edge) {
+        if(edge.edgeDevelopments_.length == 0) {
+            edge.addDevelopment({
+                model: "road",
+                player: "player-red"
+            });
+        }
+        else if(edge.edgeDevelopments_[0].player == "player-red"){
+            edge.removeDevelopment(0);
+            edge.addDevelopment({
+                model: "road",
+                player: "player-blue"
+            });
+        }
+        else {
+            edge.removeDevelopment(0);
+        }
+    });
+    */
+    
+}
+
+function resetBoard() {
+    jQuery.getJSON("/reset", {}, function() {});
+}
+
+function handleLoad() {
+
+    var playerView1 = new PlayerView(player1);
+    playerView1.render(document.getElementById("player1"));
+
+    loadBoard()
+       
+    /*
+    board.addHex(new Hex(0, 0, "plains", 2));
+    board.addHex(new Hex(3, 1, "mountains", 3));
+    board.addHex(new Hex(6, 0, "plains", 4));
+    board.addHex(new Hex(3, 3, "mountains", 8));
+    board.addHex(new Hex(6, 2, "plains", 9));
+    board.addHex(new Hex(9, 3, "mountains", 10));
+    board.addHex(new Hex(12, 2, "mountains", 12));
+    
+    
+    // only for use with development and creating maps-- do not use during gameplay
+    board.createVertexAndEdgesFromHex();
+    
+    board.vertex_[0].vertexDevelopments_.push({
+        model:"settlement",
+        player:"player-blue" // HACK-- change this to use real players
+    });
+    board.vertex_[2].vertexDevelopments_.push({
+        model:"city",
+        player:"player-red" // HACK-- change this to use real players
+    });
+    */    
+    
+    
+    
+    
+}
+
+function updatePlayer() {
+    player1.score_ = Math.floor(Math.random() * 9 + 1);
+    player1.loadPlayer();
+}
+
+//]]></script>
+</head>
+
+<body onload="handleLoad()">
+
+<h3>Player: {{ color }}</h3>
+<a id="boardReset" href="javascript:void(0)" onclick="resetBoard()">Reset Board</a>
+
+<!--
+<object id="AdobeSVG" classid="clsid:78156a80-c6a1-4bbf-8e6a-3cd390eeb4e2"> </object>
+<?import namespace="svg" urn="http://www.w3.org/2000/svg" implementation="#AdobeSVG"?>
+-->
+
+
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" width="100%" height="1024px">
+    <g id="board"></g>
+    <g id="prototypes" style="visibility:hidden;">
+        <svg id="settlement-model" y="331.41016151377545" x="635">
+            <g>
+                <rect  width="30" height="30"
+                       style="stroke: black;"/>
+                <line x1="15" y1="0" x2="15" y2="30" style="stroke:black;" />
+            </g>
+
+        </svg>
+        <svg id="city-model" x="325" y="158.20508075688772">
+            <g>
+                <rect  x="0" y="0" width="50" height="30"
+                       style="stroke: black;"/>
+                <line x1="15" y1="0" x2="15" y2="30" style="stroke:black;" />
+                <line x1="30" y1="0" x2="30" y2="30" style="stroke:black;" />
+            </g>
+        </svg>
+    </g>
+
+</svg>
+
+<div id="player1"></div>
+
+<a href="javascript:void(0);" onclick="updatePlayer()">Update Player</a>
+
+</body>
+
+</html>
