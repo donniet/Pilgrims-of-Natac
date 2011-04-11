@@ -3,16 +3,28 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.ext.webapp import template
 from google.appengine.api import users
 from google.appengine.api import channel
+from google.appengine.ext import db
 
 
 from django.utils import simplejson as json
 
 import os.path
 import logging
+import model
+import datetime
 
 from state import GameState
+import state
 
 application = None
+
+class ModelTestHandler(webapp.RequestHandler):
+    def get(self):
+        s = GameState()
+        
+        
+        s.get_board().dump(self.response.out)
+        
 
 class MainHandler(webapp.RequestHandler):
     def get(self):
@@ -41,7 +53,7 @@ class CurrentBoardHandler(webapp.RequestHandler):
             json.dump(dict(error="not signed in"), self.response.out)
             return
         
-        json.dump(application.gameState.get_board(), self.response.out)
+        application.gameState.get_board().dump(self.response.out)
         
 class ActionHandler(webapp.RequestHandler):
     def post(self):
@@ -86,7 +98,8 @@ class Application(webapp.WSGIApplication):
             (r"/", MainHandler),
             (r"/currentBoard", CurrentBoardHandler),
             (r"/action", ActionHandler),
-            (r"/reset", ResetHandler)
+            (r"/reset", ResetHandler),
+            (r"/testModel", ModelTestHandler)
         ]
         settings = dict(
             debug=True
@@ -98,8 +111,8 @@ class Application(webapp.WSGIApplication):
         gameState.onPlaceCity += self.handlePlaceCity
         
     def sendMessageAll(self, message):
-        for user in self.gameState.players:
-            channel.send_message(user.user_id(), json.dumps(message))
+        for player in self.gameState.get_players():
+            channel.send_message(player.user.user_id(), json.dumps(message))
     def handleReset(self):
         message = {'action': 'reset'}
         self.sendMessageAll(message)

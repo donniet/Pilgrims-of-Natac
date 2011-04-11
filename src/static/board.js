@@ -56,25 +56,29 @@ Board.prototype.loadJSON = function(obj) {
     var edges = obj["edges"];
     for(var i = 0; edges && i < edges.length; i++) {
         var e = new Edge(edges[i]["x1"], edges[i]["y1"], edges[i]["x2"], edges[i]["y2"]);
+/*
 	console.log(edges[i]["hex"]);
 	for(var j = 0; j < edges[i]["hex"].length; j++) {
     	    var h = hexdict[edges[i]["hex"][j]];
 	    h.edge_.push(e);
 	    e.hex_.push(h);
 	}
+*/
 	this.addEdge(e);
     }
     var vertex = obj["vertex"];
     for(var i = 0; vertex && i < vertex.length; i++) {
 	var v = new Vertex(vertex[i]["x"], vertex[i]["y"]);
+/*
 	for(var j = 0; j < vertex[i]["hex"].length; j++) {
 	    var h = hexdict[vertex[i]["hex"][j]];
 	    h.vertex_.push(v);
 	    v.hex_.push(h);
         }
+*/
 
-	for(var j = 0; j < vertex[i]["dev"].length; j++) {
-	    d = vertex[i]["dev"][j];
+	for(var j = 0; j < vertex[i]["developments"].length; j++) {
+	    d = vertex[i]["developments"][j];
 	    console.log("development(" + vertex[i]["x"]+","+vertex[i]["y"]+")={"+d["type"]+","+d["color"]+"}");
 	    v.addDevelopment({
 		model: d["type"],
