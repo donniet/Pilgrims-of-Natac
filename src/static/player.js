@@ -110,7 +110,7 @@ PlayerView.prototype.render = function (el) {
 
     var bonusCountLabel = doc.createElement("span");
     bonusCountLabel.className = "player-bonus-count-label";
-    bonusCountLabel.appendChild(doc.createTextNode("Bonuse Count"));
+    bonusCountLabel.appendChild(doc.createTextNode("Bonus Count"));
     bonusCountSpan.appendChild(bonusCountLabel);
 
     bonusCountSpan.appendChild(this.bonusCountEl_);

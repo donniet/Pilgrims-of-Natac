@@ -1,3 +1,7 @@
+body {
+    margin: 0px;
+    background: url(/static/i/wood_100.jpg);
+}
 
 .fields {
     fill:#005555;
@@ -109,6 +113,56 @@
 .player-score, .player-name, .player-resource-count, .player-bonus-count, .player-resources, .player-bonuses {
     display:block;
     width:100%;
+    
 }
 
+#player-panel {
+    width: 300px;
+    float: right;
+    border: 2px solid #333;
+    margin: 8px;
+    background: url(/static/i/30.png);
+}
+
+#game-board {
+    float: left;
+    width: 800px;
+    //background-color: #CCC;
+}
+
+#toolbar {
+    width: 100%;
+    background-color: #000;
+    padding: 5px;
+    color: #FFF;
+    opacity: 0.8;
+}
+
+#footer {
+
+}
+
+.clear {
+    clear: both;
+}
+
+.player-red {
+    color: red;
+}
+
+.player-green {
+    color: green;
+}
+
+.player-yellow {
+    color: yellow;
+}
+
+.player-blue {
+    color: blue;
+}
+
+.player-white {
+    color: white;
+}
 

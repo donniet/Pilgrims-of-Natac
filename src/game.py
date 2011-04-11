@@ -27,7 +27,8 @@ class MainHandler(webapp.RequestHandler):
         
         template_params = dict(
             color=color,
-            token=tok
+            token=tok,
+            user_name=user.nickname()
         )
         path = os.path.join(os.path.dirname(__file__), 'templates/game.xhtml')
         #self.response.headers['Content-Type'] = "application/xml"
