@@ -4,6 +4,7 @@ Created on Apr 10, 2011
 @author: donniet
 '''
 
+import logging
 from google.appengine.ext import db
 import datetime
 from django.utils import simplejson as json
@@ -13,6 +14,7 @@ class Board(db.Model):
     dateTimeStarted = db.DateTimeProperty()
     gameKey = db.StringProperty()
     resources = db.StringListProperty()
+    playerColors = db.StringListProperty()
     #TODO: add all deck of development cards
     def getVertexes(self):
         return db.Query(Vertex).ancestor(self).fetch(1000)
@@ -22,11 +24,26 @@ class Board(db.Model):
         return db.Query(Hex).ancestor(self).fetch(1000)
     
     def getVertex(self, x, y):
-        return db.Query(Vertex).ancestor(self).filter('x=', x).filter('y=', y).get()
+        return db.Query(Vertex).ancestor(self).filter('x =', x).filter('y =', y).get()
     def getEdge(self, x1, y1, x2, y2):
-        return db.Query(Edge).ancestor(self).filter('x1=', x1).filter('y1=', y1).filter('x2=', x2).filter('y2=', y2).get()
+        return db.Query(Edge).ancestor(self).filter('x1 =', x1).filter('y1 =', y1).filter('x2 =', x2).filter('y2 =', y2).get()
     def getHex(self, x, y):
-        return db.Query(Hex).ancestor(self).filter('x=', x).filter('y=', y).get()
+        return db.Query(Hex).ancestor(self).filter('x =', x).filter('y =', y).get()
+    
+    def addPlayer(self, color, user):
+        p = Player(parent=self, color=color, user=user)
+        p.put()
+        logging.info("player added: %s" % (user,))
+        return p
+    
+    def getPlayer(self, user):
+        return db.Query(Player).ancestor(self).filter('user =', user).get()
+    
+    def getPlayers(self):
+        return db.Query(Player).ancestor(self).fetch(1000)
+    
+    def dump(self, fp):
+        json.dump(self, fp, cls=BoardEncoder)
         
         
 
@@ -76,13 +93,13 @@ class Vertex(db.Model):
     def getDevelopments(self):
         return db.Query(Development).ancestor(self).fetch(1000)
     
-    def addDevelopment(self, player, type):
-        d = Development(parent=self, player=player, type=type)
+    def addDevelopment(self, color, type):
+        d = Development(parent=self, color=color, type=type)
         d.put()
         return d    
 
 class Development(db.Model):
-    player = db.ReferenceProperty(Player)
+    color = db.StringProperty()
     type = db.StringProperty()
 
 class BoardEncoder(json.JSONEncoder):
@@ -107,6 +124,7 @@ class BoardEncoder(json.JSONEncoder):
                 x = obj.x,
                 y = obj.y,
                 type = obj.type,
+                value = obj.value,
                 developments = db.Query(Development).ancestor(obj)
             )
         elif isinstance(obj, Edge):
@@ -125,7 +143,7 @@ class BoardEncoder(json.JSONEncoder):
             )
         elif isinstance(obj, Development):
             return dict(
-                player = obj.player.color, #TODO: what if obj.player is None?
+                color = obj.color, #TODO: what if obj.player is None?
                 type = obj.type
             )
         elif isinstance(obj, db.Query):
