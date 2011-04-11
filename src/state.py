@@ -140,11 +140,24 @@ class GameState(object):
     onReset = EventHook()
     onRegisterUser = EventHook()
     
-    def __init__(self):
+    def __init__(self, gamekey=None):
         bt = BoardTemplate()
         
-        self.gamekey = "A"
-        self.board = bt.instantiateModel(self.gamekey)
+        #TODO: Remove post debug
+        if not gamekey:
+            self.gamekey = "A"
+        else:
+            self.gamekey = gamekey
+            
+        logging.info("gamekey %r" % (self.gamekey,))
+            
+        self.board = model.findBoard(self.gamekey)
+        
+        #TODO: remove this logic and throw error later
+        #TODO: create a createGame thing
+        if not self.board:            
+            logging.info("gamekey not found")
+            self.board = bt.instantiateModel(self.gamekey)
         
     def registerUser(self, user):
         p = self.board.getPlayer(user)

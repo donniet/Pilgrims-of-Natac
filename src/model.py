@@ -9,6 +9,8 @@ from google.appengine.ext import db
 import datetime
 from django.utils import simplejson as json
 
+def findBoard(gamekey):
+    return db.Query(Board).filter('gamekey =', gamekey).get()
 
 class Board(db.Model):
     dateTimeStarted = db.DateTimeProperty()
