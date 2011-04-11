@@ -53,6 +53,23 @@ class CurrentBoardHandler(webapp.RequestHandler):
             json.dump(dict(error="not signed in"), self.response.out)
             return
         
+        logging.info("CurrentBoardHandler")
+        
+        application.gameState.get_board().dump(self.response.out)
+        
+class CurrentBoardByGameHandler(webapp.RequestHandler):
+    def get(self, gamekey):
+        user = users.get_current_user()
+        if not user:
+            json.dump(dict(error="not signed in"), self.response.out)
+            return
+        
+        
+        logging.info("CurrentBoardByGameHandler: %r" % (gamekey,))
+        
+        state.GameState(gamekey)
+        
+        
         application.gameState.get_board().dump(self.response.out)
         
 class ActionHandler(webapp.RequestHandler):
@@ -96,10 +113,11 @@ class Application(webapp.WSGIApplication):
         
         handlers = [
             (r"/", MainHandler),
+            (r"/(.*)/currentBoard", CurrentBoardByGameHandler),
             (r"/currentBoard", CurrentBoardHandler),
             (r"/action", ActionHandler),
             (r"/reset", ResetHandler),
-            (r"/testModel", ModelTestHandler)
+            (r"/testModel", ModelTestHandler),
         ]
         settings = dict(
             debug=True
