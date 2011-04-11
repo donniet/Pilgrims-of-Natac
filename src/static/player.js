@@ -67,7 +67,7 @@ PlayerView.prototype.render = function (el) {
     imageSpan.appendChild(this.imageEl_);
     this.el_.appendChild(imageSpan);
 
-
+    $("#pp-name").html(this.player_.name_);
     this.nameEl_ = doc.createTextNode(this.player_.name_);
     var nameSpan = doc.createElement("span");
     nameSpan.className = "player-name";
