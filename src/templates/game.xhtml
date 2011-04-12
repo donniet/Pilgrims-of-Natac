@@ -177,7 +177,12 @@ function updatePlayer() {
 <body onload="handleLoad()">
 
 <h3>Player: {{ color }}</h3>
-<a id="boardReset" href="javascript:void(0)" onclick="joingame()">Join Game</a>
+
+{% ifequal color None %}
+    <a id="boardReset" href="javascript:void(0)" onclick="joingame()">Join Game</a>
+{% else %}
+    Joined
+{% endifequal %}
 
 <!--
 <object id="AdobeSVG" classid="clsid:78156a80-c6a1-4bbf-8e6a-3cd390eeb4e2"> </object>
