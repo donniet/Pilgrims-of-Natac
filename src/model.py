@@ -62,7 +62,42 @@ class DevelopmentType(db.Model):
 class Player(db.Model):
     color = db.StringProperty()
     user = db.UserProperty()
+    
+    # send a dict of resources, integer mappings to add to players resources
+    # negative integers subtract resources
+    # if a resource isn't listed under a player it is assumed they have zero
+    def adjustResources(self, resource_dict, validate_only=False):
+        rd = resource_dict.copy()
+        #HACK: shouldn't be more than 25 resource types, but still...
+        playerResources = db.Query(PlayerResources).ancestor(self).fetch(25)
+        #TODO: add transactions around this logic
+        
+        valid = True
+        # first add to the resources we know about
+        for pr in playerResources:
+            if not rd.get(pr.resource, None) is None: 
+                if pr.amount + rd[pr.resource] >= 0:
+                    if not validate_only:
+                        pr.amount += rd[pr.resource]
+                        pr.put()
+                        del rd[pr.resource]
+                    else:
+                        valid = False
+                
+        # then loop through remaining resources and add them as player resources
+        for r, a in rd.items():
+            if a >= 0:
+                pr = PlayerResources(resource=r, amount=a)
+                pr.put()
+            else:
+                valid = False
+                
+        return valid
     #TODO: Resource and Development Cards
+
+class PlayerResources(db.Model):
+    resource = db.StringProperty()
+    amount = db.IntegerProperty()
     
 class Hex(db.Model):
     x = db.IntegerProperty()
@@ -123,8 +158,14 @@ class BoardEncoder(json.JSONEncoder):
         elif isinstance(obj, Player):
             return dict(
                 color = obj.color,
-                user = dict(nickname=obj.user.nickname(), email=obj.user.email())
+                user = dict(nickname=obj.user.nickname(), email=obj.user.email()),
+                playerResources = db.Query(PlayerResources).ancestor(obj)
                 #TODO: Serialize resources and development cards here
+            )
+        elif isinstance(obj, PlayerResources):
+            return dict(
+                resource = obj.resource,
+                amount = obj.amount
             )
         elif isinstance(obj, Hex):
             return dict(
