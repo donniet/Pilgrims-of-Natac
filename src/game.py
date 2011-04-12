@@ -125,7 +125,33 @@ class GameHandler(webapp.RequestHandler):
         )
         path = os.path.join(os.path.dirname(__file__), 'templates/game.xhtml')
         self.response.out.write(template.render(path, template_params))
-       
+
+class TestResourcesHandler(webapp.RequestHandler):
+    @login_required
+    def get(self, gamekey):
+        user = users.get_current_user()
+        
+        s = application.get_live_game(gamekey)
+        
+        if s is None:
+            self.error(404)
+            return
+        
+        tok = s.registerUser(user)
+        color = s.joinUser(user)
+        
+        player = s.board.getPlayer(user)
+        
+        player.resetResources()
+        player.adjustResources({"ore": 2, "wheat": 5})
+        player.adjustResources({"ore": -1, "wheat": -2})
+        if player.adjustResources({"brick": -1, "wheat": -2}, True):
+            logging.error("error, we removed brick even though there isn't any")
+        else:
+            logging.info("successful")
+        
+        json.dump(player, self.response.out, cls=model.BoardEncoder)
+           
 
 class Application(webapp.WSGIApplication):
     live_games = dict()
@@ -149,6 +175,7 @@ class Application(webapp.WSGIApplication):
             (r"/game/(.*)/join", JoinHandler),
             (r"/creategame", NewGameHandler),
             (r"/testModel", ModelTestHandler),
+            (r"/testResources/(.*)/", TestResourcesHandler)
         ]
         settings = dict(
             debug=True

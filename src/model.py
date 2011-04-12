@@ -66,34 +66,66 @@ class Player(db.Model):
     # send a dict of resources, integer mappings to add to players resources
     # negative integers subtract resources
     # if a resource isn't listed under a player it is assumed they have zero
-    def adjustResources(self, resource_dict, validate_only=False):
+    def resetResources(self):
+        resource_dict = dict()
+        for r in self.parent().resources:
+            resource_dict[r] = 0
+        
+        #TODO: add exception handling
+        db.run_in_transaction(self.__setResourcesTran, resource_dict)
+    
+    def __setResourcesTran(self, resource_dict):
         rd = resource_dict.copy()
         #HACK: shouldn't be more than 25 resource types, but still...
         playerResources = db.Query(PlayerResources).ancestor(self).fetch(25)
         #TODO: add transactions around this logic
         
-        valid = True
         # first add to the resources we know about
         for pr in playerResources:
             if not rd.get(pr.resource, None) is None: 
-                if pr.amount + rd[pr.resource] >= 0:
-                    if not validate_only:
-                        pr.amount += rd[pr.resource]
-                        pr.put()
-                        del rd[pr.resource]
-                    else:
-                        valid = False
+                pr.amount = rd[pr.resource]
+                pr.put()
+                del rd[pr.resource]
                 
         # then loop through remaining resources and add them as player resources
         for r, a in rd.items():
-            if a >= 0:
-                pr = PlayerResources(resource=r, amount=a)
-                pr.put()
-            else:
-                valid = False
+            pr = PlayerResources(parent=self, resource=r, amount=a)
+            pr.put()
                 
-        return valid
-    #TODO: Resource and Development Cards
+        return True        
+        
+    
+    def adjustResources(self, resource_dict, validate_only=False):
+        ret = db.run_in_transaction(self.__adjustResourcesTrans, resource_dict, validate_only)
+        
+        return (ret is None) or ret
+    
+    def __adjustResourcesTrans(self, resource_dict, validate_only):
+        rd = resource_dict.copy()
+        #HACK: shouldn't be more than 25 resource types, but still...
+        playerResources = db.Query(PlayerResources).ancestor(self).fetch(25)
+        #TODO: add transactions around this logic
+        
+        # first add to the resources we know about
+        for pr in playerResources:
+            if not rd.get(pr.resource, None) is None: 
+                if pr.amount + rd[pr.resource] < 0:
+                    raise db.Rollback()
+                elif not validate_only:
+                    pr.amount += rd[pr.resource]
+                    pr.put()
+                    del rd[pr.resource]
+                
+        # then loop through remaining resources and add them as player resources
+        for r, a in rd.items():
+            if a < 0:
+                raise db.Rollback()
+            elif not validate_only:
+                pr = PlayerResources(parent=self, resource=r, amount=a)
+                pr.put()
+                
+        return True
+    #TODO: Development Cards
 
 class PlayerResources(db.Model):
     resource = db.StringProperty()
