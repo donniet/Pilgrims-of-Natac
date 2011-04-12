@@ -9,14 +9,19 @@ from google.appengine.ext import db
 import datetime
 from django.utils import simplejson as json
 
+def pagedBoards(offset, count):
+    return db.Query(Board).fetch(count, offset)
+
 def findBoard(gamekey):
-    return db.Query(Board).filter('gamekey =', gamekey).get()
+    logging.info("looking for board %s" % (gamekey,))
+    return db.Query(Board).filter('gameKey =', gamekey).get()
 
 class Board(db.Model):
     dateTimeStarted = db.DateTimeProperty()
     gameKey = db.StringProperty()
     resources = db.StringListProperty()
     playerColors = db.StringListProperty()
+    owner = db.UserProperty()
     #TODO: add all deck of development cards
     def getVertexes(self):
         return db.Query(Vertex).ancestor(self).fetch(1000)

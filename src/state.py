@@ -5,6 +5,8 @@ import logging
 from django.utils import simplejson as json
 import model
 import datetime
+from google.appengine.api import channel
+import string
 
 from events import EventHook
 
@@ -51,12 +53,13 @@ class BoardTemplate(object):
         
         random.shuffle(self.hexTypes)
         
-    def instantiateModel(self, gameKey):
+    def instantiateModel(self, gameKey, owner):
         board = model.Board()
         board.gameKey = gameKey
         board.dateTimeStarted = datetime.datetime.now()
         board.resources = self.resources
         board.playerColors = self.colors
+        board.owner = owner
         board.put()
         
         j = 0
@@ -126,13 +129,43 @@ class BoardTemplate(object):
                 edge.put()
                 found["%(x1)d-%(y1)d-%(x2)d-%(y2)d" % e] = True
     
-        
+    
+def create_game(user, template = BoardTemplate):
+    #TODO: check for the unlikely case of this board key being a duplicate
+    # generate board key
+    
+    gameKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(8))
+    bt = template()
+    
+    logging.info("creating game %s" % (gameKey,))
+    
+    bt.instantiateModel(gameKey, user)
+    
+    return gameKey
+    
+def get_game(gamekey):
+    logging.info("finding game %s" % (gamekey,))
+    
+    b = model.findBoard(gamekey)
+    
+    if b is None:
+        logging.info("did not find it...")
+    
+    s = GameState(gamekey)
+    if not s.isvalid():
+        logging.info("is not valid %s" % (gamekey,))
+        return None
+    else:
+        return s
+    
 
 class GameState(object):
     board = None
     colors = ["red", "blue", "green", "orange", "white", "brown"]
     log = []
     gamekey = None
+    users = []
+    valid = False
     
     #events
     onPlaceSettlement = EventHook()
@@ -140,26 +173,35 @@ class GameState(object):
     onReset = EventHook()
     onRegisterUser = EventHook()
     
-    def __init__(self, gamekey=None):
-        bt = BoardTemplate()
-        
-        #TODO: Remove post debug
-        if not gamekey:
-            self.gamekey = "A"
-        else:
-            self.gamekey = gamekey
-            
-        logging.info("gamekey %r" % (self.gamekey,))
-            
+    def __init__(self, gamekey):
+        self.gamekey = gamekey
         self.board = model.findBoard(self.gamekey)
+        self.valid = (not self.board is None)
+    
+    def isvalid(self):
+        return self.valid
+    
+    def addUser(self, user):        
+        for u in self.users:
+            if u.user_id() == user.user_id():
+                return
         
-        #TODO: remove this logic and throw error later
-        #TODO: create a createGame thing
-        if not self.board:            
-            logging.info("gamekey not found")
-            self.board = bt.instantiateModel(self.gamekey)
-        
+        self.users.append(user)
     def registerUser(self, user):
+        self.addUser(user)
+        return channel.create_channel(self.gamekey + user.user_id())
+    def get_user_color(self, user):
+        player = self.board.getPlayer(user)
+        
+        if player is None:
+            return None
+        else:
+            return player.color
+        
+    def joinUser(self, user):
+        #all joined users must be registered
+        self.registerUser(user)
+        
         p = self.board.getPlayer(user)
         
         if p:
@@ -169,15 +211,22 @@ class GameState(object):
         players = self.board.getPlayers()
         
         if len(players) >= len(cols):
-            return False
+            return None
         
         for p in players:
-            cols.remove(p.color)
+            if p.user == user:
+                #HACK: this is ugly
+                return p.color
+            else:
+                cols.remove(p.color)
             
         color = cols.pop()
             
         self.board.addPlayer(color, user)
         return color
+    def sendMessageAll(self, message):
+        for user in self.users:
+            channel.send_message(self.gamekey + user.user_id(), json.dumps(message))
     def processAction(self, action, data, user):
         if action == "reset":
             return self.resetBoardAction()
@@ -223,7 +272,7 @@ class GameState(object):
             return False
         
         v.addDevelopment(color, "settlement")
-        self.onPlaceSettlement.fire(x=x, y=y, color=color)
+        self.sendMessageAll({'action': 'placeSettlement', 'x':x, 'y':y, 'color':color})
         return True
     def placeCity(self, x, y, user):
         #logging.info("placeSettlement: " + data)
@@ -249,7 +298,7 @@ class GameState(object):
             if d.type == "settlement" and d.color == color:
                 d.type = "city"
                 d.put()
-                self.onPlaceCity.fire(x=x, y=y, color=color)
+                self.sendMessageAll({'action': 'placeCity', 'x':x, 'y':y, 'color':color})
                 return True
             
         return False

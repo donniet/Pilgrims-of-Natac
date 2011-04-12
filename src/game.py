@@ -4,6 +4,7 @@ from google.appengine.ext.webapp import template
 from google.appengine.api import users
 from google.appengine.api import channel
 from google.appengine.ext import db
+from google.appengine.ext.webapp.util import login_required
 
 
 from django.utils import simplejson as json
@@ -32,53 +33,36 @@ class MainHandler(webapp.RequestHandler):
         if not user:
             self.redirect(users.create_login_url(self.request.uri))
             return
-            
-        color = application.gameState.registerUser(user) 
         
-        tok = channel.create_channel(user.user_id())
-        
-        template_params = dict(
-            color=color,
-            token=tok
-        )
-        path = os.path.join(os.path.dirname(__file__), 'templates/game.xhtml')
-        #self.response.headers['Content-Type'] = "application/xml"
+                    
+        template_params = {
+            'games': model.pagedBoards(0, 1000)
+        }
+                
+        path = os.path.join(os.path.dirname(__file__), 'templates/main.xhtml')
         self.response.out.write(template.render(path, template_params))
         
-
-class CurrentBoardHandler(webapp.RequestHandler):
-    def get(self):
-        user = users.get_current_user()
-        if not user:
-            json.dump(dict(error="not signed in"), self.response.out)
-            return
-        
-        logging.info("CurrentBoardHandler")
-        
-        application.gameState.get_board().dump(self.response.out)
-        
 class CurrentBoardByGameHandler(webapp.RequestHandler):
+    # this is called by JS so we shouldn't use the @login_required which would redirect
+    # instead just return an error
     def get(self, gamekey):
         user = users.get_current_user()
         if not user:
             json.dump(dict(error="not signed in"), self.response.out)
             return
         
-        
-        logging.info("CurrentBoardByGameHandler: %r" % (gamekey,))
-        
-        state.GameState(gamekey)
-        
-        
-        application.gameState.get_board().dump(self.response.out)
+        s = application.get_live_game(gamekey)
+                
+        s.get_board().dump(self.response.out)
         
 class ActionHandler(webapp.RequestHandler):
-    def post(self):
+    def post(self, gamekey):
         user = users.get_current_user()
+        #TODO: handle error better-- should this be a get maybe?
         if not user:
             json.dump(dict(error="not signed in"), self.response.out)
             return
-        
+                
         action = self.request.get("action")
         data = self.request.get("data")
         logging.info("data: " + self.request.get("data"))
@@ -86,60 +70,90 @@ class ActionHandler(webapp.RequestHandler):
             data = json.loads(self.request.get("data"))
         except:
             pass
-                
-        #print data
         
-        ret = application.gameState.processAction(action, data, user)
+        s = application.get_live_game(gamekey)        
+        
+        ret = s.processAction(action, data, user)
 
         json.dump(ret, self.response.out)
 
-class ResetHandler(webapp.RequestHandler):
+class NewGameHandler(webapp.RequestHandler):
+    @login_required
     def get(self):
         user = users.get_current_user()
-        if not user:
-            json.dump(dict(error="not signed in"), self.response.out)
+        
+        gamekey = state.create_game(user)
+                
+        self.redirect("/game/%s/" % (gamekey,))
+
+class JoinHandler(webapp.RequestHandler):
+    @login_required
+    def get(self, gamekey):
+        user = users.get_current_user()
+        
+        s = application.get_live_game(gamekey)
+        
+        if s is None:
+            self.error(404)
             return
-        application.sendMessageAll({'action':'reset'})
         
-        application.gameState = GameState()
-        application.setupHandlers(application.gameState)
+        color = s.joinUser(user)
+        self.redirect("/game/%s/" % (gamekey,))
         
+        
+class GameHandler(webapp.RequestHandler):
+    @login_required
+    def get(self, gamekey):
+        user = users.get_current_user()
+        
+        logging.info("gamekey %s" % (gamekey,))
+        
+        s = application.get_live_game(gamekey)
+        
+        if s is None:
+            #TODO: something more interesting here
+            self.error(404)
+            return
+        
+        tok = s.registerUser(user)
+        color = s.get_user_color(user) 
+        
+        template_params = dict(
+            color=color,
+            token=tok,
+            gamekey=gamekey
+        )
+        path = os.path.join(os.path.dirname(__file__), 'templates/game.xhtml')
+        self.response.out.write(template.render(path, template_params))
+       
 
 class Application(webapp.WSGIApplication):
-    gameState = None
-    def __init__(self):
-        self.gameState = GameState()
-        self.setupHandlers(self.gameState)
+    live_games = dict()
+    def get_live_game(self, gamekey):
+        s = self.live_games.get(gamekey, None)
+        if s is None:
+            s = state.get_game(gamekey)
+            if not s is None:
+                self.live_games[s.get_game_key()] = s
+                return s
+        else:
+            return s
         
+        return None
+    def __init__(self):
         handlers = [
             (r"/", MainHandler),
-            (r"/(.*)/currentBoard", CurrentBoardByGameHandler),
-            (r"/currentBoard", CurrentBoardHandler),
-            (r"/action", ActionHandler),
-            (r"/reset", ResetHandler),
+            (r"/game/(.*)/", GameHandler),
+            (r"/game/(.*)/currentBoard", CurrentBoardByGameHandler),
+            (r"/game/(.*)/action", ActionHandler),
+            (r"/game/(.*)/join", JoinHandler),
+            (r"/creategame", NewGameHandler),
             (r"/testModel", ModelTestHandler),
         ]
         settings = dict(
             debug=True
         )
         webapp.WSGIApplication.__init__(self, handlers, **settings)
-    def setupHandlers(self, gameState):
-        gameState.onReset += self.handleReset
-        gameState.onPlaceSettlement += self.handlePlaceSettlement
-        gameState.onPlaceCity += self.handlePlaceCity
-        
-    def sendMessageAll(self, message):
-        for player in self.gameState.get_players():
-            channel.send_message(player.user.user_id(), json.dumps(message))
-    def handleReset(self):
-        message = {'action': 'reset'}
-        self.sendMessageAll(message)
-    def handlePlaceSettlement(self, x, y, color):
-        message = {'action': 'placeSettlement', 'x':x, 'y':y, 'color':color}
-        self.sendMessageAll(message)
-    def handlePlaceCity(self, x, y, color):
-        message = {'action': 'placeCity', 'x':x, 'y':y, 'color':color}
-        self.sendMessageAll(message)
 
 application = Application()
 
