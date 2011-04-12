@@ -14,7 +14,7 @@
 
 <ul>
 {% for game in games %}
-<li>{{game.gameKey}} <a href="/game/{{game.gameKey}}/join">Join</a></li>
+<li><a href="/game/{{game.gameKey}}/">{{game.gameKey}}</a> <a href="/game/{{game.gameKey}}/join">Join Game</a></li>
 {% endfor %}
 </ul>
 
