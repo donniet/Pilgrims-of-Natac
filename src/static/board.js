@@ -56,14 +56,7 @@ Board.prototype.loadJSON = function(obj) {
     var edges = obj["edges"];
     for(var i = 0; edges && i < edges.length; i++) {
         var e = new Edge(edges[i]["x1"], edges[i]["y1"], edges[i]["x2"], edges[i]["y2"]);
-/*
-	console.log(edges[i]["hex"]);
-	for(var j = 0; j < edges[i]["hex"].length; j++) {
-    	    var h = hexdict[edges[i]["hex"][j]];
-	    h.edge_.push(e);
-	    e.hex_.push(h);
-	}
-*/
+
 	for(var j = 0; j < edges[i]["developments"].length; j++) {
 	    d = edges[i]["developments"][j];
 	    console.log("edge development: " + d["color"]);
@@ -77,13 +70,6 @@ Board.prototype.loadJSON = function(obj) {
     var vertex = obj["vertex"];
     for(var i = 0; vertex && i < vertex.length; i++) {
 	var v = new Vertex(vertex[i]["x"], vertex[i]["y"]);
-/*
-	for(var j = 0; j < vertex[i]["hex"].length; j++) {
-	    var h = hexdict[vertex[i]["hex"][j]];
-	    h.vertex_.push(v);
-	    v.hex_.push(h);
-        }
-*/
 
 	for(var j = 0; j < vertex[i]["developments"].length; j++) {
 	    d = vertex[i]["developments"][j];
@@ -95,10 +81,9 @@ Board.prototype.loadJSON = function(obj) {
 	}
 	this.addVertex(v);
     }
-    
-    //TODO: pull verts and edges too
-    //this.createVertexAndEdgesFromHex();
+    this.createAdjecencyMap()
 }
+Board.prototype.createAdjecencyMap = function () {}
 Board.prototype.setModelElement = function (modelName, svgEl, centerPosition) {
     this.modelElements_[modelName] = {
         "svgElement": svgEl,
