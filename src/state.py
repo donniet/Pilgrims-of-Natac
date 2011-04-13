@@ -234,6 +234,8 @@ class GameState(object):
             return self.placeSettlement(data["x"], data["y"], user)
         if action == "placeCity":
             return self.placeCity(data["x"], data["y"], user)
+        if action == "placeRoad":
+            return self.placeRoad(user, **data)
         return False
     def get_game_key(self):
         return self.gamekey
@@ -248,29 +250,99 @@ class GameState(object):
         return self.board
     def get_players(self):
         return self.board.getPlayers()
+    def placeRoad(self, user, x1, y1, x2, y2):
+        #TODO: does the player have enough resources to buy a road?
+        #TODO: does the player have any roads left? 
+        p = self.board.getPlayer(user)
+        if p is None:
+            logging.info("player not found %s." % (user,))
+            return False
+        
+        color = p.color
+        
+        e = self.board.getEdge(x1, y1, x2, y2)
+        if e is None:
+            logging.info("edge %d,%d,%d,%d not found", (x1, y1, x2, y2))
+            return False
+        
+        devs = e.getDevelopments()
+        if devs and len(devs) > 0:
+            logging.info("found edge development")
+            return False
+        
+        adjecentVertDev = False
+        adjecentEdgeDev = False
+        
+        adj_edges = e.getAdjecentEdges()
+        for a in adj_edges:
+            devs = a.getDevelopments()
+            for d in devs:
+                if d.color == color:
+                    adjecentEdgeDev = True
+                    break;
+            if adjecentEdgeDev:
+                break;
+        
+        adj_verts = [
+            self.board.getVertex(e.x1, e.y1),
+            self.board.getVertex(e.x2, e.y2)
+        ]
+        for a in adj_verts:
+            devs = a.getDevelopments()
+            for d in devs:
+                if d.color == color:
+                    adjecentVertDev = True
+                    break;
+            if adjecentVertDev:
+                break;
+        
+        if not adjecentVertDev and not adjecentEdgeDev:
+            return False
+        
+        e.addDevelopment(color, "road")
+        self.sendMessageAll({'action': 'placeRoad', 'x1':x1, 'y1':y1, 'x2':x2, 'y2':y2, 'color':color})
+        return True
+            
     def placeSettlement(self, x, y, user):
         #logging.info("placeSettlement: " + data)
         #TODO: does this vertex have a road of the right color running into it?
-        #TODO: is this vertex at least one vertex away from another city or settlement? 
         #TODO: does the player have enough resources to buy a settlement?
         #TODO: does the player have any settlements left? 
+        #TODO: are we in the placement phase of the game?
         
         p = self.board.getPlayer(user)
-        if p == None: 
+        if p is None: 
             logging.info("player not found %s." % (user,))
             return False
            
         color = p.color
         
         v = self.board.getVertex(x, y)
-        if v == None: 
+        if v is None: 
             logging.info("vertex %d,%d not found." % (x,y) )
             return False
         
+        # are there any developments on this vertex?
         devs = v.getDevelopments()
         if devs and len(devs) > 0: 
             return False
         
+        # is this vertex at least one unit away from another settlement or city?
+        adjecentDev = False
+        adj = v.getAdjecentVertexes()
+        for a in adj:
+            logging.info("adjecent (%d,%d)", a.x, a.y)
+            devs = a.getDevelopments()
+            for d in devs:
+                if d.type == "settlement" or d.type == "city":
+                    adjecentDev = True
+                    break;
+            if adjecentDev: 
+                break;
+        
+        if adjecentDev:
+            return False
+                
         v.addDevelopment(color, "settlement")
         self.sendMessageAll({'action': 'placeSettlement', 'x':x, 'y':y, 'color':color})
         return True
@@ -278,6 +350,7 @@ class GameState(object):
         #logging.info("placeSettlement: " + data)
         #TODO: does the player have enough resources to buy a city?
         #TODO: does the player have any cities left?
+        #TODO: are we in the placement phase of the game?
         
         
         p = self.board.getPlayer(user)

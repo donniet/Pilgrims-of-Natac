@@ -83,6 +83,9 @@ function loadBoard() {
         case "placeCity":
             board.placeCity(message["x"], message["y"], message["color"]);
             break;
+        case "placeRoad":
+            board.placeRoad(message["x1"], message["y1"], message["x2"], message["y2"], message["color"]);
+            break;
         }
         
     }
@@ -103,6 +106,16 @@ function loadBoard() {
         jQuery.postJSON("/game/{{gamekey}}/action", {action:action, data:"{\"x\":"+vertex.position_.x+",\"y\":"+vertex.position_.y+"}"}, function(ret){
             //alert(ret);
         });
+    });
+    
+    board.addListener("edgeclick", function(edge) {
+        var action = "placeRoad";
+        
+        if(edge.edgeDevelopments_.length == 0) {
+            jQuery.postJSON("/game/{{gamekey}}/action", {action:action, data:'{"x1":'+edge.first_.x+',"y1":'+edge.first_.y+',"x2":'+edge.second_.x+',"y2":'+edge.second_.y+"}"}, function(ret) {
+                //alert(ret)
+            });
+        }
     });
     /*
     board.addListener("edgeclick", function(edge) {
@@ -136,32 +149,7 @@ function handleLoad() {
     var playerView1 = new PlayerView(player1);
     playerView1.render(document.getElementById("player1"));
 
-    loadBoard()
-       
-    /*
-    board.addHex(new Hex(0, 0, "plains", 2));
-    board.addHex(new Hex(3, 1, "mountains", 3));
-    board.addHex(new Hex(6, 0, "plains", 4));
-    board.addHex(new Hex(3, 3, "mountains", 8));
-    board.addHex(new Hex(6, 2, "plains", 9));
-    board.addHex(new Hex(9, 3, "mountains", 10));
-    board.addHex(new Hex(12, 2, "mountains", 12));
-    
-    
-    // only for use with development and creating maps-- do not use during gameplay
-    board.createVertexAndEdgesFromHex();
-    
-    board.vertex_[0].vertexDevelopments_.push({
-        model:"settlement",
-        player:"player-blue" // HACK-- change this to use real players
-    });
-    board.vertex_[2].vertexDevelopments_.push({
-        model:"city",
-        player:"player-red" // HACK-- change this to use real players
-    });
-    */    
-    
-    
+    loadBoard()  
     
     
 }

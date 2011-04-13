@@ -64,6 +64,14 @@ Board.prototype.loadJSON = function(obj) {
 	    e.hex_.push(h);
 	}
 */
+	for(var j = 0; j < edges[i]["developments"].length; j++) {
+	    d = edges[i]["developments"][j];
+	    console.log("edge development: " + d["color"]);
+	    e.addDevelopment({
+	        model: d["type"],
+	        player: "player-" + d["color"]
+	    });
+	}
 	this.addEdge(e);
     }
     var vertex = obj["vertex"];
@@ -121,6 +129,19 @@ Board.prototype.placeCity = function(x, y, color) {
 	    });
 	    break;
         }
+    }
+}
+Board.prototype.placeRoad = function(x1, y1, x2, y2, color) {
+    for(var i = 0; i < this.edge_.length; i++) {
+        e = this.edge_[i];
+	if(e.first_.x == x1 && e.first_.y == y1 && e.second_.x == x2 && e.second_.y == y2) {
+	    e.edgeDevelopments_ = [];
+            e.addDevelopment({
+		model: "road",
+		player: "player-" + color
+	    });
+	    break;
+	}
     }
 }
 Board.prototype.addListener = function (event, listener) {
@@ -428,6 +449,7 @@ function Edge(x1, y1, x2, y2) {
 Edge.prototype.addDevelopment = function (development) {
     this.edgeDevelopments_.push(development);
     if (this.svgEl_ && this.board_) {
+	console.log("rendering edge development");
         this.board_.renderEdgeDevelopment(this, development, this.svgEl_);
     }
 }

@@ -18,10 +18,13 @@ def findBoard(gamekey):
 
 class Board(db.Model):
     dateTimeStarted = db.DateTimeProperty()
+    dateTimeEnded = db.DateTimeProperty()
     gameKey = db.StringProperty()
     resources = db.StringListProperty()
     playerColors = db.StringListProperty()
     owner = db.UserProperty()
+    phase = db.StringProperty()
+    
     #TODO: add all deck of development cards
     def getVertexes(self):
         return db.Query(Vertex).ancestor(self).fetch(1000)
@@ -140,8 +143,8 @@ class Hex(db.Model):
     def getDevelopments(self):
         return db.Query(Development).ancestor(self).fetch(1000)
     
-    def addDevelopment(self, player, type):
-        d = Development(parent=self, player=player, type=type)
+    def addDevelopment(self, color, type):
+        d = Development(parent=self, color=color, type=type)
         d.put()
         return d  
 
@@ -155,10 +158,21 @@ class Edge(db.Model):
     def getDevelopments(self):
         return db.Query(Development).ancestor(self).fetch(1000)
     
-    def addDevelopment(self, player, type):
-        d = Development(parent=self, player=player, type=type)
+    def addDevelopment(self, color, type):
+        d = Development(parent=self, color=color, type=type)
         d.put()
-        return d  
+        return d
+    
+    def getAdjecentEdges(self):
+        edges  = db.GqlQuery("SELECT * FROM Edge WHERE x1 = :x AND y1 = :y AND __key__ != :key AND ANCESTOR IS :parent", x=self.x1, y=self.y1, parent=self.parent(), key=self.key()).fetch(25)
+        edges2 = db.GqlQuery("SELECT * FROM Edge WHERE x2 = :x AND y2 = :y AND __key__ != :key AND ANCESTOR IS :parent", x=self.x1, y=self.y1, parent=self.parent(), key=self.key()).fetch(25)
+        edges3 = db.GqlQuery("SELECT * FROM Edge WHERE x1 = :x AND y1 = :y AND __key__ != :key AND ANCESTOR IS :parent", x=self.x2, y=self.y2, parent=self.parent(), key=self.key()).fetch(25)
+        edges4 = db.GqlQuery("SELECT * FROM Edge WHERE x2 = :x AND y2 = :y AND __key__ != :key AND ANCESTOR IS :parent", x=self.x2, y=self.y2, parent=self.parent(), key=self.key()).fetch(25)
+        edges.extend(edges2)
+        edges.extend(edges3)
+        edges.extend(edges4)
+        
+        return edges
     
 class Vertex(db.Model):
     x = db.IntegerProperty()
@@ -170,7 +184,36 @@ class Vertex(db.Model):
     def addDevelopment(self, color, type):
         d = Development(parent=self, color=color, type=type)
         d.put()
-        return d    
+        return d
+    
+    def getAdjecentEdges(self):
+        edges   = db.Query(Edge).ancestor(self.parent()).filter('x1 = ', self.x).filter('y1 = ', self.y).fetch(25)
+        edges_r = db.Query(Edge).ancestor(self.parent()).filter('x2 = ', self.x).filter('y2 = ', self.y).fetch(25)
+        
+        edges.extend(edges_r)
+        logging.info("adjecent edges to (%d,%d): %d", self.x, self.y, len(edges))
+        
+        return edges
+    
+    def getAdjecentVertexes(self):
+        edges = self.getAdjecentEdges()
+        xs = []
+        ys = []
+        for e in edges:
+            if e.x1 != self.x or e.y1 != self.y:
+                xs.append(e.x1)
+                ys.append(e.y1)
+            if e.x2 != self.x or e.y2 != self.y:
+                xs.append(e.x2)
+                ys.append(e.y2)
+        
+        # for a hexagonal board the following query actually returns exactly 
+        # the adjecent verts-- but we should filter through these to make sure...
+        #TODO: filter through adjecent verts to handle non-hexagonal boards
+        adj = db.GqlQuery("SELECT * FROM Vertex WHERE x IN :xlist AND y IN :ylist AND ANCESTOR IS :parent", xlist=xs, ylist=ys, parent=self.parent()).fetch(100)
+               
+        
+        return adj
 
 class Development(db.Model):
     color = db.StringProperty()
