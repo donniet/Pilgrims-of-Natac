@@ -234,7 +234,7 @@ class GameState(object):
         if action == "placeCity":
             return self.placeCity(data["x"], data["y"], user)
         if action == "placeRoad":
-            return self.placeRoad(user, **data)
+            return self.placeRoad(user, data["x1"], data["y1"], data["x2"], data["y2"])
         return False
     def get_game_key(self):
         return self.gamekey
