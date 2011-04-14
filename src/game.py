@@ -58,6 +58,28 @@ class CurrentBoardByGameHandler(webapp.RequestHandler):
                 
         s.get_board().dump(self.response.out)
         
+class CurrentPlayerByGameHandler(webapp.RequestHandler):
+    def get(self, gamekey):
+        user = users.get_current_user()
+        if not user:
+            json.dump(dict(error="not signed in"), self.response.out)
+            return
+        
+        s = application.get_live_game(gamekey)
+        
+        if s is None:
+            json.dump(dict(error="game is not live or does not exist"), self.response.out)
+            return
+        
+        player = s.get_player_by_user(user)
+        if player is None:
+            json.dump(dict(error="player is not part of game"), self.response.out)
+            return
+        
+        json.dump(player, self.response.out, cls=model.CurrentPlayerEncoder)
+        
+        
+        
 class ActionHandler(webapp.RequestHandler):
     def post(self, gamekey):
         user = users.get_current_user()
@@ -180,6 +202,7 @@ class Application(webapp.WSGIApplication):
             (r"/game/(.*)/currentBoard", CurrentBoardByGameHandler),
             (r"/game/(.*)/action", ActionHandler),
             (r"/game/(.*)/join", JoinHandler),
+            (r"/game/(.*)/currentPlayer", CurrentPlayerByGameHandler),
             (r"/creategame", NewGameHandler),
             (r"/testModel", ModelTestHandler),
             (r"/testResources/(.*)/", TestResourcesHandler)

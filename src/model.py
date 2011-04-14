@@ -236,6 +236,27 @@ class Development(db.Model):
     color = db.StringProperty()
     type = db.StringProperty()
 
+class CurrentPlayerEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Player):
+            playerResources = db.Query(PlayerResources).ancestor(obj).fetch(1000)
+            
+            return dict(
+                color = obj.color,
+                user = dict(nickname=obj.user.nickname(), email=obj.user.email()),
+                playerResources = playerResources,
+                totalResources = len(playerResources),
+                userpicture = userPicture(obj.user.email()),
+                score = obj.score
+            )
+        elif isinstance(obj, PlayerResources):
+            return dict(
+                resource = obj.resource,
+                amount = obj.amount
+            )
+        else:
+            return json.JSONEncoder.default(self, obj)
+
 class BoardEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Board):
@@ -248,19 +269,19 @@ class BoardEncoder(json.JSONEncoder):
                 vertex = db.Query(Vertex).ancestor(obj)
             )
         elif isinstance(obj, Player):
+            playerResources = db.Query(PlayerResources).ancestor(obj).fetch(1000)
+            
             return dict(
                 color = obj.color,
                 user = dict(nickname=obj.user.nickname(), email=obj.user.email()),
-                playerResources = db.Query(PlayerResources).ancestor(obj),
+                # don't return all the resources with the board
+                #playerResources = db.Query(PlayerResources).ancestor(obj),
+                totalResources = len(playerResources),
                 userpicture = userPicture(obj.user.email()),
                 score = obj.score
                 #TODO: Serialize resources and development cards here
             )
-        elif isinstance(obj, PlayerResources):
-            return dict(
-                resource = obj.resource,
-                amount = obj.amount
-            )
+        
         elif isinstance(obj, Hex):
             return dict(
                 x = obj.x,

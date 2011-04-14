@@ -197,6 +197,11 @@ class GameState(object):
         else:
             return player.color
         
+    def get_player_by_user(self, user):
+        player = self.board.getPlayer(user)
+        
+        return player
+        
     def joinUser(self, user):
         #all joined users must be registered
         self.registerUser(user)
