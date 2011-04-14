@@ -48,42 +48,41 @@ Board.prototype.loadJSON = function(obj) {
     var hexdict = new Object();
 
     for(var i = 0; hexes && i < hexes.length; i++) {
-	var h = new Hex(hexes[i]["x"], hexes[i]["y"], hexes[i]["type"], hexes[i]["value"]);
+		var h = new Hex(hexes[i]["x"], hexes[i]["y"], hexes[i]["type"], hexes[i]["value"]);
         this.addHex(h);
-	hexdict[hexes[i]["id"]] = h;
+		hexdict[hexes[i]["id"]] = h;
         console.log("added hex: " + hexes[i]["id"] + ":" + hexes[i]["type"]);
     }
     var edges = obj["edges"];
     for(var i = 0; edges && i < edges.length; i++) {
         var e = new Edge(edges[i]["x1"], edges[i]["y1"], edges[i]["x2"], edges[i]["y2"]);
 
-	for(var j = 0; j < edges[i]["developments"].length; j++) {
-	    d = edges[i]["developments"][j];
-	    console.log("edge development: " + d["color"]);
-	    e.addDevelopment({
-	        model: d["type"],
-	        player: "player-" + d["color"]
-	    });
-	}
-	this.addEdge(e);
+		for(var j = 0; j < edges[i]["developments"].length; j++) {
+			d = edges[i]["developments"][j];
+			console.log("edge development: " + d["color"]);
+			e.addDevelopment({
+			    model: d["type"],
+			    player: "player-" + d["color"]
+			});
+		}
+		this.addEdge(e);
     }
     var vertex = obj["vertex"];
     for(var i = 0; vertex && i < vertex.length; i++) {
-	var v = new Vertex(vertex[i]["x"], vertex[i]["y"]);
+		var v = new Vertex(vertex[i]["x"], vertex[i]["y"]);
 
-	for(var j = 0; j < vertex[i]["developments"].length; j++) {
-	    d = vertex[i]["developments"][j];
-	    console.log("development(" + vertex[i]["x"]+","+vertex[i]["y"]+")={"+d["type"]+","+d["color"]+"}");
-	    v.addDevelopment({
-		model: d["type"],
-		player: "player-" + d["color"]
-	    });
-	}
-	this.addVertex(v);
+		for(var j = 0; j < vertex[i]["developments"].length; j++) {
+			d = vertex[i]["developments"][j];
+			console.log("development(" + vertex[i]["x"]+","+vertex[i]["y"]+")={"+d["type"]+","+d["color"]+"}");
+			v.addDevelopment({
+			model: d["type"],
+			player: "player-" + d["color"]
+			});
+		}
+		this.addVertex(v);
     }
     this.createAdjecencyMap()
 }
-Board.prototype.createAdjecencyMap = function () {}
 Board.prototype.setModelElement = function (modelName, svgEl, centerPosition) {
     this.modelElements_[modelName] = {
         "svgElement": svgEl,
@@ -96,10 +95,10 @@ Board.prototype.placeSettlement = function(x, y, color) {
         if(v.position_.x == x && v.position_.y == y) {
             v.vertexDevelopments_ = [];
             v.addDevelopment({
-		model: "settlement",
-		player: "player-" + color
-	    });
-	    break;
+				model: "settlement",
+				player: "player-" + color
+			});
+	   		break;
         }
     }
 }
@@ -109,24 +108,24 @@ Board.prototype.placeCity = function(x, y, color) {
         if(v.position_.x == x && v.position_.y == y) {
             v.vertexDevelopments_ = [];
             v.addDevelopment({
-		model: "city",
-		player: "player-" + color
-	    });
-	    break;
+				model: "city",
+				player: "player-" + color
+			});
+			break;
         }
     }
 }
 Board.prototype.placeRoad = function(x1, y1, x2, y2, color) {
     for(var i = 0; i < this.edge_.length; i++) {
         e = this.edge_[i];
-	if(e.first_.x == x1 && e.first_.y == y1 && e.second_.x == x2 && e.second_.y == y2) {
-	    e.edgeDevelopments_ = [];
-            e.addDevelopment({
-		model: "road",
-		player: "player-" + color
-	    });
-	    break;
-	}
+		if(e.first_.x == x1 && e.first_.y == y1 && e.second_.x == x2 && e.second_.y == y2) {
+			e.edgeDevelopments_ = [];
+	        e.addDevelopment({
+				model: "road",
+				player: "player-" + color
+			});
+			break;
+		}
     }
 }
 Board.prototype.addListener = function (event, listener) {
@@ -426,11 +425,278 @@ function Edge(x1, y1, x2, y2) {
     this.first_ = { "x": typeof x1 == "undefined" ? 0 : x1, "y": typeof y1 == "undefined" ? 0 : y1 };
     this.second_ = { "x": typeof x2 == "undefined" ? 0 : x2, "y": typeof y2 == "undefined" ? 0 : y2 };
     this.hex_ = new Array(); /* between 1 and 2 */
-    this.vertex = new Array(); /* always 2 */
+    this.vertex_ = new Array(); /* always 2 */
+    this.adjecentEdge_ = new Array(); /* 2 or 3 */
     this.edgeDevelopments_ = new Array(); /* road */
     this.svgEl_ = null;
     this.board_ = null;
 }
+function Vertex(x, y) {
+    this.position_ = { "x": typeof x == "undefined" ? 0 : x, "y": typeof y == "undefined" ? 0 : y };
+    this.hex_ = new Array(); /* between 1 and 3 */
+    this.edge_ = new Array(); /* between 2 and 3 */
+    this.adjecentVertex_ = new Array();
+    this.vertexDevelopments_ = new Array(); /* city, settlement, city wall, knight, etc. */
+    this.svgEl_ = null;
+    this.board_ = null;
+}
+
+function DictList() {
+    this.dict = new Object()
+}
+DictList.prototype.add = function(key, object) {
+    if(typeof this.dict[key] == "undefined") this.dict[key] = new Array();
+
+    this.dict[key].push(object);
+}
+DictList.prototype.get = function(key) {
+    arr = this.dict[key];
+    if(typeof this.dict[key] == "undefined") return new Array();
+
+    return this.dict[key];
+}
+
+Board.prototype._highlight = function(svgEl) {
+	svgEl.setAttribute("class", svgEl.getAttribute("class") + " highlighted");
+//	svgEl.style.fill = "rgba(100,255,100,0.3)";
+}
+Board.prototype._clearHighlight = function(svgEl) {
+	var cname = svgEl.getAttribute("class");
+	cname = cname.replace("highlighted", "");
+	svgEl.setAttribute("class", cname);
+//	svgEl.style.fill = "inherit";
+}
+
+Board.prototype.highlightBuildableVertex = function(player) {
+	//alert("blah");
+	for(var i = 0; i < this.vertex_.length; i++) {
+		v = this.vertex_[i];
+		var buildable = true;
+		if(v.vertexDevelopments_.length == 0) {
+			// more than one vertex away from another city/settlement
+			for(var j = 0; buildable && j < v.adjecentVertex_.length; j++) {
+				va = v.adjecentVertex_[j];
+				if(va.vertexDevelopments_.length > 0)
+					buildable = false;
+			}
+			// connected by a road
+
+			if(buildable) {
+				var incomingroad = false;
+				for(var j = 0; !incomingroad && j < v.edge_.length; j++) {
+					ea = v.edge_[j];
+					
+					for(var k = 0; k < !incomingroad && ea.edgeDevelopments_.length; k++) {
+						ed = ea.edgeDevelopments_[k];
+						
+						//console.log("edge development: " + ed.type + ", " + ed.player);
+						if(ed.model == "road" && ed.player == player)
+							incomingroad = true;
+					}
+				}
+				buildable = incomingroad;
+			}
+		}
+		else
+			buildable = false;
+
+		if(buildable) {
+			this._highlight(v.svgEl_.firstChild);
+			console.log("found one!");
+		}
+	}
+}
+Board.prototype.highlightBuildableEdge = function(player) {
+	for(var i = 0; i < this.edge_.length; i++) {
+		var e = this.edge_[i];
+		var buildable = true;
+		if(e.edgeDevelopments_.length == 0) {
+			// is this road adjecent to any of the users cities/settlements?
+			var adjecentVertexDev = false;
+			for(var j = 0; !adjecentVertexDev && j < e.vertex_.length; j++) {
+				va = e.vertex_[j];
+				for(var k = 0; k < !adjecentVertexDev && va.vertexDevelopments_.length; k++) {
+					vd = va.vertexDevelopments_[k];
+					if(vd.player == player) 
+						adjecentVertexDev = true;
+				}
+			}
+
+			// or else look through the adjecent edges for roads...
+			if(!adjecentVertexDev) {
+				var adjecentRoad = false;
+				for(var j = 0; !adjecentRoad && j < e.adjecentEdge_.length; j++) {
+					ea = e.adjecentEdge_[j];
+					for(var k = 0; !adjecentRoad && k < ea.edgeDevelopments_.length; k++) {
+						ed = ea.edgeDevelopments_[k];
+						if(ed.player == player)
+							adjecentRoad = true;
+					}
+				}
+			}
+			
+			buildable = (adjecentVertexDev || adjecentRoad);
+		}
+
+		if(buildable) {
+			this._highlight(e.svgEl_.firstChild);
+			console.log("found a road!");
+		}
+		
+	}
+}
+Board.prototype.clearHighlights = function() {
+	for(var i = 0; i < this.vertex_.length; i++) this._clearHighlight(this.vertex_[i].svgEl_.firstChild);
+	for(var i = 0; i < this.edge_.length; i++) this._clearHighlight(this.edge_[i].svgEl_.firstChild);
+}
+
+/* TODO: this function can almost certainly be optimized... */
+Board.prototype.createAdjecencyMap = function () {
+    // first create dictionaries of all pieces by their x,y coords
+    var hexdict = new DictList()
+    var edgedict = new DictList()
+    var vertdict = new DictList()
+
+    var poskey = function(pos) { return pos.x + "," + pos.y; };
+
+    for(var i = 0; i < this.hex_.length; i++) {
+        var h = this.hex_[i];
+        var hexcoords = this.hexCoords(h.position_.x, h.position_.y);
+		for(var j = 0; j < hexcoords.length; j++) {
+            hexdict.add(poskey(hexcoords[j]), h);
+        }
+    }
+    for(var i = 0; i < this.edge_.length; i++) {
+        var e = this.edge_[i];
+		edgedict.add(poskey(e.first_), e);
+		edgedict.add(poskey(e.second_), e);
+    }
+    for(var i = 0; i < this.vertex_.length; i++) {
+		var v = this.vertex_[i];
+		vertdict.add(poskey(v.position_), v);
+    }
+
+	/* HEXES */
+    for(var i = 0; i < this.hex_.length; i++) {
+        var h = this.hex_[i];
+        var hexcoords = this.hexCoords(h.position_.x, h.position_.y);
+		var hexesAdded = new Object();
+		var edgesAdded = new Object();
+		var vertsAdded = new Object();
+		hexesAdded[poskey(h.position_)] = true;
+
+        for(var j = 0; j < hexcoords.length; j++) {
+	    	var key = poskey(hexcoords[j]);
+			var hd = hexdict.get(key);
+			for(k = 0; k < hd.length; k++) {
+				if(typeof hexesAdded[poskey(hd[k].position_)] == "undefined") {
+					h.adjecentHex_.push(hd[k]);
+					hexesAdded[poskey(hd[k].position_)] = true;
+				}
+			}
+
+			var ed = edgedict.get(key);			
+			for(k = 0; k < ed.length; k++) {
+				if(typeof edgesAdded[poskey(ed[k].first_)+","+poskey(ed[k].second_)] == "undefined") {
+					h.edge_.push(ed[k]);
+					ed[k].hex_.push(h);
+					edgesAdded[poskey(ed[k].first_)+","+poskey(ed[k].second_)] = true;
+				}
+			}
+
+			var vd = vertdict.get(key);
+			for(k = 0; k < vd.length; k++) {
+				if(typeof vertsAdded[poskey(vd[k].position_)] == "undefined") {
+					h.vert_.push(vd[k]);
+					vd[k].hex_.push(h);
+					vertsAdded[poskey(vd[k].position_)] = true;
+				}
+			}
+        }
+    }
+
+	/* VERTS */
+    for(var i = 0; i < this.vertex_.length; i++) {
+        var v = this.vertex_[i];
+		var edgesAdded = new Object();
+		var vertsAdded = new Object();
+
+		var key = poskey(v.position_);
+		vertsAdded[poskey(v.position_)] = true;
+
+		var ed = edgedict.get(key);			
+		for(k = 0; k < ed.length; k++) {
+			if(typeof edgesAdded[poskey(ed[k].first_)+","+poskey(ed[k].second_)] == "undefined") {
+				v.edge_.push(ed[k]);
+				ed[k].vertex_.push(v);
+				edgesAdded[poskey(ed[k].first_)+","+poskey(ed[k].second_)] = true;
+								
+				if(typeof vertsAdded[poskey(ed[k].first_)] == "undefined") {
+					vd = vertdict.get(poskey(ed[k].first_))
+					if(vd.length > 0) {
+						v.adjecentVertex_.push(vd[0]);
+						vertsAdded[poskey(vd[0].position_)] = true;
+					}
+				}
+				if(typeof vertsAdded[poskey(ed[k].second_)] == "undefined") {
+					vd = vertdict.get(poskey(ed[k].second_))
+					if(vd.length > 0) {
+						v.adjecentVertex_.push(vd[0]);
+						vertsAdded[poskey(vd[0].position_)] = true;
+					}
+				}
+			}
+		}
+    }
+
+	/* EDGES */
+	for(var i = 0; i < this.edge_.length; i++) {
+		var e = this.edge_[i];
+		var edgesAdded = new Object();
+
+		// all we have to worry about are adj edges
+		var ed = edgedict.get(poskey(e.first_));
+
+		for(var k = 0; k < ed.length; k++) {
+			if(typeof edgesAdded[poskey(ed[k].first_)+","+poskey(ed[k].second_)] == "undefined") {
+				e.adjecentEdge_.push(ed[k]);
+				edgesAdded[poskey(ed[k].first_)+","+poskey(ed[k].second_)] = true;
+			}
+		}
+
+		ed = edgedict.get(poskey(e.second_));
+
+		for(var k = 0; k < ed.length; k++) {
+			if(typeof edgesAdded[poskey(ed[k].first_)+","+poskey(ed[k].second_)] == "undefined") {
+				e.adjecentEdge_.push(ed[k]);
+				edgesAdded[poskey(ed[k].first_)+","+poskey(ed[k].second_)] = true;
+			}
+		}
+	}
+}
+
+Vertex.prototype.addDevelopment = function (vertexDevelopment) {
+    this.vertexDevelopments_.push(vertexDevelopment);
+    if (this.svgEl_ && this.board_) {
+        this.board_.renderVertexDevelopment(this, vertexDevelopment, this.svgEl_);
+    }
+}
+Vertex.prototype.removeDevelopment = function (index) {
+    var arr = new Array();
+    for (var i = 0; i < this.vertexDevelopments_.length; i++) {
+        var vd = this.vertexDevelopments_[i];
+        if (i != index) {
+            arr.push(vd);
+        }
+        else {
+            vd.svgEl_.parentNode.removeChild(vd.svgEl_);
+            vd.svgEl_ = null;
+        }
+    }
+    delete this.vertexDevelopments_;
+    this.vertexDevelopments_ = arr;
+}
+
 Edge.prototype.addDevelopment = function (development) {
     this.edgeDevelopments_.push(development);
     if (this.svgEl_ && this.board_) {
@@ -452,36 +718,6 @@ Edge.prototype.removeDevelopment = function (index) {
     }
     delete this.edgeDevelopments_;
     this.edgeDevelopments_ = arr;
-}
-
-function Vertex(x, y) {
-    this.position_ = { "x": typeof x == "undefined" ? 0 : x, "y": typeof y == "undefined" ? 0 : y };
-    this.hex_ = new Array(); /* between 1 and 3 */
-    this.edge_ = new Array(); /* between 2 and 3 */
-    this.vertexDevelopments_ = new Array(); /* city, settlement, city wall, knight, etc. */
-    this.svgEl_ = null;
-    this.board_ = null;
-}
-Vertex.prototype.addDevelopment = function (vertexDevelopment) {
-    this.vertexDevelopments_.push(vertexDevelopment);
-    if (this.svgEl_ && this.board_) {
-        this.board_.renderVertexDevelopment(this, vertexDevelopment, this.svgEl_);
-    }
-}
-Vertex.prototype.removeDevelopment = function (index) {
-    var arr = new Array();
-    for (var i = 0; i < this.vertexDevelopments_.length; i++) {
-        var vd = this.vertexDevelopments_[i];
-        if (i != index) {
-            arr.push(vd);
-        }
-        else {
-            vd.svgEl_.parentNode.removeChild(vd.svgEl_);
-            vd.svgEl_ = null;
-        }
-    }
-    delete this.vertexDevelopments_;
-    this.vertexDevelopments_ = arr;
 }
 
 
