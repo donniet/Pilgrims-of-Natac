@@ -34,4 +34,7 @@ GIT with 20 Commands or So)
 [http://www-cs-students.stanford.edu/~blynn/gitmagic/ch04.html](Git
 Magic)
 
+[http://www.bonsai.com/wiki/howtos/vcs/git_remote_resolve/](Resolving
+Git Remote issues)
+
 
