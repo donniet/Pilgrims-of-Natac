@@ -177,19 +177,11 @@ function updatePlayer() {
 
 <body onload="handleLoad()">
 
-    <h3>Player: {{ color }}</h3>
-
-    {% ifequal color None %}
-        <a id="boardReset" href="javascript:void(0)" onclick="joingame()">Join Game</a>
-    {% else %}
-        Joined
-    {% endifequal %}
-
     <div id="toolbar">
         {% ifequal color None %}
             <a id="boardReset" href="javascript:void(0)" onclick="joingame()">Join Game</a>
         {% else %}
-            Player: <span class="player-{{ color }}">{{ user_name }}</span>
+        You are: <div class="player-{{ color }}" style="width:10px; height:10px; display:inline-block;"></div> {{ nick }} 
         {% endifequal %}
     </div>
 
@@ -228,8 +220,12 @@ function updatePlayer() {
 <div id="pp">
     <div id="pp-bg"></div>
     <div id="player-panel2">
-        <div id="pp-name">Player Name</div>
-
+        <div class="player-hdr">
+            <div id="pp-grav">
+                <img id="pp-photo" src="{{imageUrl}}" alt="A picture of you"/>
+            </div>
+            <div id="pp-name">Player Name</div>
+        </div>
         <h3>Resources</h3>
         <div id="pp-resources">
             <div class="pp-res">
@@ -259,9 +255,6 @@ function updatePlayer() {
         </div>
     </div>
 </div>
-
-
-
 
 <div id="player-panel">
         <div id="player1"></div>

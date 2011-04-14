@@ -31,4 +31,7 @@ If you are using a flavor vi, your settings should look like this
 [http://www.kernel.org/pub/software/scm/git/docs/everyday.html](Everyday
 GIT with 20 Commands or So)
 
+[http://www-cs-students.stanford.edu/~blynn/gitmagic/ch04.html](Git
+Magic)
+
 

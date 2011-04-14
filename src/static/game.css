@@ -156,7 +156,19 @@ body {
     width: 300px;
     margin: 8px;
     opacity: 1.0;
-    z-index: 9;
+    
+}
+
+#pp-grav {
+    float: left;
+    height: 40px;
+    width: 40px;
+}
+
+#pp-photo {
+    width: 36px;
+    height: 36px;
+    border: 2px solid #000;
 }
 
 #pp-name {
@@ -188,6 +200,16 @@ body {
     opacity: 0.8;
 }
 
+.popup {
+    position: absolute;
+    margin: 25% 25%;
+    top: 25%
+    left: 25%;
+    width: 50%;
+    height: 50%;
+    background-color: #FFF;
+}
+
 #footer {
 
 }
@@ -197,23 +219,23 @@ body {
 }
 
 .player-red {
-    color: red;
+    background-color: red;
 }
 
 .player-green {
-    color: green;
+    background-color: green;
 }
 
 .player-yellow {
-    color: yellow;
+    background-color: yellow;
 }
 
 .player-blue {
-    color: blue;
+    background-color: blue;
 }
 
 .player-white {
-    color: white;
+    background-color: white;
 }
 
 .pp-res {

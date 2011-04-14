@@ -38,6 +38,7 @@ class MainHandler(webapp.RequestHandler):
                     
         template_params = {
             'games': model.pagedBoards(0, 1000),
+            'nick': user.nickname(),
             'imageUrl' : model.userPicture()
         }
                 
@@ -118,13 +119,17 @@ class GameHandler(webapp.RequestHandler):
             return
         
         tok = s.registerUser(user)
-        color = s.get_user_color(user) 
+        color = s.get_user_color(user)
+        nick = user.nickname()
         
-        template_params = dict(
-            color=color,
-            token=tok,
-            gamekey=gamekey
-        )
+        template_params = {
+            'color' : color,
+            'token' : tok,
+            'gamekey' : gamekey,
+            'nick': nick,
+            'imageUrl' : model.userPicture()
+        }
+
         path = os.path.join(os.path.dirname(__file__), 'templates/game.xhtml')
         self.response.out.write(template.render(path, template_params))
 
