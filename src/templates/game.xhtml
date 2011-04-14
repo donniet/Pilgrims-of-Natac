@@ -94,6 +94,26 @@ function loadBoard() {
         connected = false;
         console.log("disconnected.");
     };
+
+	var highlightVerts = document.getElementById("highlightVerts");
+
+	toggleHighlight = true;
+	highlightVerts.onclick = function() {
+		if(toggleHighlight)	board.highlightBuildableVertex("player-{{color}}");
+		else board.clearHighlights();
+
+		toggleHighlight = !toggleHighlight;
+	};
+
+	var highlightEdges = document.getElementById("highlightEdges");
+
+	toggleHighlightEdges = true;
+	highlightEdges.onclick = function() {
+		if(toggleHighlightEdges)	board.highlightBuildableEdge("player-{{color}}");
+		else board.clearHighlights();
+
+		toggleHighlightEdges = !toggleHighlightEdges;
+	};
     
     board.addListener("hexclick", function(hex) { alert("hexclick: " + hex.hexType_); });
     board.addListener("vertexclick", function(vertex) {
@@ -159,6 +179,8 @@ function updatePlayer() {
     player1.loadPlayer();
 }
 
+
+
 //]]></script>
 </head>
 
@@ -171,6 +193,9 @@ function updatePlayer() {
 {% else %}
     Joined
 {% endifequal %}
+
+<a href="javascript:void(0)" id="highlightVerts">Settlement</a>|
+<a href="javascript:void(0)" id="highlightEdges">Road</a>
 
 <!--
 <object id="AdobeSVG" classid="clsid:78156a80-c6a1-4bbf-8e6a-3cd390eeb4e2"> </object>
