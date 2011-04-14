@@ -32,37 +32,37 @@ If you are using a flavor vi, your settings should look like this
 
 Please use the following sequence of commands to publish your changes to the "main" github repo:
 
-git fetch orign
-git rebase remotes/origin/master
-git log
+    git fetch origin
+    git rebase remotes/origin/master
+    git log
 
 --verify that things look like fast forward updates, and not like a merge --
 
-git fetch origin
+    git fetch origin
 
 --verify that nothing new was brought down--
 
-git push orign
+    git push orign
 
 You should replace orign and master with the names of your remote and target branch if they are different.
 You can see a list of your remotes by running
 
-git remote
+    git remote
 
 To add a remote run
 
-git add <remote_name> <repo_path_or_url>
+    git add <remote_name> <repo_path_or_url>
 
 2) Adding changes
 You should be careful to avoid adding "build artificats" to the repo. 
 
 Use can use 
 
-git add -u 
+    git add -u 
 
 to only add "known files" to the staging area. That will avoiding picking up things like executable files inadvertantly. You can use
 
-git status -s | grep -P "^\?" | cut -c 4-
+    git status -s | grep -P "^\?" | cut -c 4-
 
 to find "new" files. That git doesn't know about yet.
 
@@ -72,7 +72,7 @@ If you add those to the .gitignore file they will be ignored by git.
 
 You can then add the remanining files to the using
 
-git status -s | grep -P "^\?" | cut -c 4- | xargs git add
+    git status -s | grep -P "^\?" | cut -c 4- | xargs git add
 
 3) Links and such
 
