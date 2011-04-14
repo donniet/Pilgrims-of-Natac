@@ -7,8 +7,23 @@
       xmlns:xlink="http://www.w3.org/1999/xlink"> 
 <head>
 <title>Game Listing Page</title>
+<style type="text/css">
+    #photo {
+        border-style:solid;
+        border-width:5px;
+        width: 128px;
+        height: 128px;
+    }
+    #photoCell {
+        padding-bottom:20px;
+    }
+</style>
 </head>
 <body>
+
+<div id="photoCell">
+  <img id="photo" src="{{imageUrl}}" alt="A picture of you"/>
+</div>
 
 <a href="/creategame">Create Game</a>
 
