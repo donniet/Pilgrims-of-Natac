@@ -8,6 +8,9 @@ import logging
 from google.appengine.ext import db
 import datetime
 from django.utils import simplejson as json
+from google.appengine.api import users
+import urllib
+import hashlib
 
 def pagedBoards(offset, count):
     return db.Query(Board).fetch(count, offset)
@@ -129,6 +132,12 @@ class Player(db.Model):
                 
         return True
     #TODO: Development Cards
+
+def userPicture():
+    user = users.get_current_user()
+    ret = "http://www.gravatar.com/avatar/" + hashlib.md5(user.email().lower()).hexdigest() + "?"
+    ret += urllib.urlencode({'d':'identicon', 's':'128'})
+    return ret
 
 class PlayerResources(db.Model):
     resource = db.StringProperty()

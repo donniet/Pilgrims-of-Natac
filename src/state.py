@@ -1,4 +1,3 @@
-
 import random
 import uuid
 import logging
@@ -377,3 +376,4 @@ class GameState(object):
         return False
     
     
+

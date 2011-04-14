@@ -1,4 +1,9 @@
 
+body {
+    margin: 0px;
+    background: url(/static/i/wood_100.jpg);
+    font-family: Constantia, ‘Lucida Bright’, Lucidabright, ‘Lucida Serif’, Lucida, ‘DejaVu Serif’, ‘Bitstream Vera Serif’, ‘Liberation Serif’, Georgia, serif;
+}
 .fields {
     fill:#005555;
     stroke:#000000;
@@ -115,6 +120,176 @@
 .player-score, .player-name, .player-resource-count, .player-bonus-count, .player-resources, .player-bonuses {
     display:block;
     width:100%;
+    
+}
+
+
+#player-panel {
+    width: 300px;
+    float: right;
+    border: 2px solid #333;
+    margin: 8px;
+    background: url(/static/i/30.png);
+}
+
+#pp {
+    position: relative;
+    width: 300px;
+    height: 250px;
+    float: right;
+    margin: 10px;
+}
+
+#pp-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 250px;
+    border: 2px solid #333;
+
+    background: rgb(0,0,0);
+    opacity: 0.5;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    
+}
+
+#player-panel2 {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 300px;
+    margin: 8px;
+    opacity: 1.0;
+    
+}
+
+#pp-grav {
+    float: left;
+    height: 40px;
+    width: 40px;
+}
+
+#pp-photo {
+    width: 36px;
+    height: 36px;
+    border: 2px solid #000;
+}
+
+#pp-name {
+    font-effect: engrave;
+    font-size: 3.2em;
+    color: #000;
+    font-variant: small-caps;
+    letter-spacing: 0.1em;
+    text-align: center;
+}
+
+#pp-resources {
+    margin: auto;
+    text-align: center;
+    width: 280px;
+}
+
+#game-board {
+    float: left;
+    width: 800px;
+    //background-color: #CCC;
+}
+
+#toolbar {
+    width: 100%;
+    background-color: #000;
+    padding: 5px;
+    color: #FFF;
+    opacity: 0.8;
+}
+
+.popup {
+    position: absolute;
+    margin: 25% 25%;
+    top: 25%
+    left: 25%;
+    width: 50%;
+    height: 50%;
+    background-color: #FFF;
+}
+
+#footer {
+
+}
+
+.clear {
+    clear: both;
+}
+
+.player-red {
+    background-color: red;
+}
+
+.player-green {
+    background-color: green;
+}
+
+.player-yellow {
+    background-color: yellow;
+}
+
+.player-blue {
+    background-color: blue;
+}
+
+.player-white {
+    background-color: white;
+}
+
+.pp-res {
+    float: left;
+    width: 33px;
+    height: 75px;
+    text-align: center;
+    padding: 10px;
+    color: #aaa;
+}
+
+.card {
+    margin-bottom: 5px;
+    width: 25px;
+    height: 40px;
+    background-color: #FFF;
+    border: 1px solid #CCC;
+
+     -moz-border-radius: 2px;
+    border-radius: 2px;
+
+    padding: 3px;
+    clear: both;
+}
+
+.card div {
+    width: 100%;
+    height: 100%;
+}
+
+.sheep {
+    background-color: #BFE882;
+}
+
+.wheat {
+    background-color: #FFEF4F;
+}
+
+.wood {
+    background-color: #00932C;
+}
+
+.rock {
+    background-color: #787887;
+}
+
+.clay {
+    background-color: firebrick;
 }
 
 
