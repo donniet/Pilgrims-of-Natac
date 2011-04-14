@@ -45,7 +45,7 @@ player1.resources_ = [{resourceName_: "Ore"}, {resourceName_: "Ore"}, {resourceN
 player1.bonuses_ = [{bonusName_: "Monopoly"}, {bonusName_: "Soldier"}];
 
 function getBoard(board) {
-    jQuery.getJSON("/currentBoard", function(data) {
+    jQuery.getJSON("/game/{{gamekey}}/currentBoard", function(data) {
         board.loadJSON(data);
         svg = document.getElementById("board");
         while(svg.firstChild) svg.removeChild(svg.firstChild);
@@ -101,7 +101,7 @@ function loadBoard() {
         
         console.log("action: " + action);
                                                                 
-        jQuery.postJSON("/action", {action:action, data:"{\"x\":"+vertex.position_.x+",\"y\":"+vertex.position_.y+"}"}, function(ret){
+        jQuery.postJSON("/game/{{gamekey}}/action", {action:action, data:"{\"x\":"+vertex.position_.x+",\"y\":"+vertex.position_.y+"}"}, function(ret){
             //alert(ret);
         });
     });
@@ -128,8 +128,8 @@ function loadBoard() {
     
 }
 
-function resetBoard() {
-    jQuery.getJSON("/reset", {}, function() {});
+function joingame() {
+    document.location = "join";
 }
 
 function handleLoad() {
@@ -177,11 +177,24 @@ function updatePlayer() {
 
 <body onload="handleLoad()">
 
+    <h3>Player: {{ color }}</h3>
+
+    {% ifequal color None %}
+        <a id="boardReset" href="javascript:void(0)" onclick="joingame()">Join Game</a>
+    {% else %}
+        Joined
+    {% endifequal %}
+
     <div id="toolbar">
-        Player: <span class="player-{{ color }}">{{ user_name }}</span> |
-        <a id="boardReset" href="javascript:void(0)" onclick="resetBoard()">Reset Board</a>
+        {% ifequal color None %}
+            <a id="boardReset" href="javascript:void(0)" onclick="joingame()">Join Game</a>
+        {% else %}
+            Player: <span class="player-{{ color }}">{{ user_name }}</span>
+        {% endifequal %}
     </div>
+
     <div id="game-board">
+
 <!--
 <object id="AdobeSVG" classid="clsid:78156a80-c6a1-4bbf-8e6a-3cd390eeb4e2"> </object>
 <?import namespace="svg" urn="http://www.w3.org/2000/svg" implementation="#AdobeSVG"?>

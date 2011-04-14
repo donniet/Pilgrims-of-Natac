@@ -9,3 +9,7 @@ handlers:
     
 - url: /.*
   script: game.py
+
+  
+builtins:
+- datastore_admin: on
