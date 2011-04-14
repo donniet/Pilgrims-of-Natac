@@ -127,7 +127,7 @@ class GameHandler(webapp.RequestHandler):
             'token' : tok,
             'gamekey' : gamekey,
             'nick': nick,
-            'imageUrl' : model.userPicture()
+            'imageUrl' : model.userPicture(user.email())
         }
 
         path = os.path.join(os.path.dirname(__file__), 'templates/game.xhtml')

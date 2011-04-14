@@ -43,9 +43,16 @@ Board.prototype.loadJSON = function(obj) {
     this.hex_ = new Array();
     this.edge_ = new Array();
     this.vertex_ = new Array();
+	this.players_ = new Array();
 
     var hexes = obj["hexes"];
     var hexdict = new Object();
+
+	for(var i = 0; obj["players"] && i < obj["players"].length; i++) {
+		var p = new Player();
+		p.loadJSON(obj["players"][i]);
+		this.players_.push(p);
+	}
 
     for(var i = 0; hexes && i < hexes.length; i++) {
 		var h = new Hex(hexes[i]["x"], hexes[i]["y"], hexes[i]["type"], hexes[i]["value"]);

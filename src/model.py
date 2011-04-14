@@ -76,6 +76,7 @@ class DevelopmentType(db.Model):
 class Player(db.Model):
     color = db.StringProperty()
     user = db.UserProperty()
+    score = db.IntegerProperty(default=0)
     
     # send a dict of resources, integer mappings to add to players resources
     # negative integers subtract resources
@@ -141,9 +142,8 @@ class Player(db.Model):
         return True
     #TODO: Development Cards
 
-def userPicture():
-    user = users.get_current_user()
-    ret = "http://www.gravatar.com/avatar/" + hashlib.md5(user.email().lower()).hexdigest() + "?"
+def userPicture(email):
+    ret = "http://www.gravatar.com/avatar/" + hashlib.md5(email.lower()).hexdigest() + "?"
     ret += urllib.urlencode({'d':'identicon', 's':'128'})
     return ret
 
@@ -251,7 +251,9 @@ class BoardEncoder(json.JSONEncoder):
             return dict(
                 color = obj.color,
                 user = dict(nickname=obj.user.nickname(), email=obj.user.email()),
-                playerResources = db.Query(PlayerResources).ancestor(obj)
+                playerResources = db.Query(PlayerResources).ancestor(obj),
+                userpicture = userPicture(obj.user.email()),
+                score = obj.score
                 #TODO: Serialize resources and development cards here
             )
         elif isinstance(obj, PlayerResources):
