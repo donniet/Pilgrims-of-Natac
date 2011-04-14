@@ -8,6 +8,7 @@
 <head>
 <link type="text/css" rel="stylesheet" href="/static/game.css"></link>
 <link type="text/css" rel="stylesheet" href="/static/Reset.css" />
+<link type="text/css" rel="stylesheet" href="/static/picture.css" />
 <!-- <script type="text/javascript" src="/static/json.js"></script> -->
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js" type="text/javascript"></script>
 <script type="text/javascript" src="/static/event.js"></script>
@@ -228,7 +229,11 @@ function updatePlayer() {
 <div id="pp">
     <div id="pp-bg"></div>
     <div id="player-panel2">
-        <div id="pp-name">Player Name</div>
+        <div style="border-top:3px;border-bottom:3px;">
+            <span id="photoCell" class="smallPhoto" style="vertical-align:middle;display:table-cell;">
+              <img id="photo" src="{{imageUrl}}" alt="A picture of you"/>
+            </span><span id="pp-name" style="vertical-align:middle;display:table-cell;">Player Name</span>
+        </div>
 
         <h3>Resources</h3>
         <div id="pp-resources">

@@ -123,7 +123,8 @@ class GameHandler(webapp.RequestHandler):
         template_params = dict(
             color=color,
             token=tok,
-            gamekey=gamekey
+            gamekey=gamekey,
+            imageUrl= model.userPicture()
         )
         path = os.path.join(os.path.dirname(__file__), 'templates/game.xhtml')
         self.response.out.write(template.render(path, template_params))

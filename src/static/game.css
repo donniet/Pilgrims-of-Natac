@@ -1,9 +1,9 @@
+
 body {
     margin: 0px;
     background: url(/static/i/wood_100.jpg);
     font-family: Constantia, ‘Lucida Bright’, Lucidabright, ‘Lucida Serif’, Lucida, ‘DejaVu Serif’, ‘Bitstream Vera Serif’, ‘Liberation Serif’, Georgia, serif;
 }
-
 .fields {
     fill:#005555;
     stroke:#000000;
