@@ -35,9 +35,14 @@ class MainHandler(webapp.RequestHandler):
             return
         
 
+        # query only games you have joined
+        query_opts = {
+            #'user': user
+        }
                     
         template_params = {
-            'games': model.pagedBoards(0, 1000),
+            #'games': model.pagedBoards(0, 1000),
+            'games': model.queryBoards(0, 100, **query_opts),
             'nick': user.nickname(),
             'imageUrl' : model.userPicture(user.email())
         }
