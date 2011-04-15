@@ -89,6 +89,24 @@ function loadBoard() {
         case "placeRoad":
             board.placeRoad(message["x1"], message["y1"], message["x2"], message["y2"], message["color"]);
             break;
+        case "playerJoinGame":
+            throw "Message not yet implemented";
+        case "playerLeaveGame":
+            throw "Message not yet implemented";
+        case "playerStartFirstTurn":
+            throw "Message not yet implemented";
+        case "playerBuildFirstSettlement":
+            throw "Message not yet implemented";
+        case "playerBuildFirstRoad":
+            throw "Message not yet implemented";
+        case "playerStartSecondTurn":
+            throw "Message not yet implemented";
+        case "playerBuildSecondSettlement":
+            throw "Message not yet implemented";
+        case "playerBuildSecondRoad":
+            throw "Message not yet implemented";
+        case "playerStartNormalTurn":
+            throw "Message not yet implemented";
         }
         
     }
@@ -117,7 +135,7 @@ function loadBoard() {
 
 		toggleHighlightEdges = !toggleHighlightEdges;
 	};
-    
+
     board.addListener("hexclick", function(hex) { alert("hexclick: " + hex.hexType_); });
     board.addListener("vertexclick", function(vertex) {
         var action = "placeSettlement";

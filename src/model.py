@@ -11,6 +11,8 @@ from django.utils import simplejson as json
 from google.appengine.api import users
 import urllib
 import hashlib
+import util
+
 
 def pagedBoards(offset, count):
     return db.Query(Board).fetch(count, offset)
@@ -19,6 +21,9 @@ def findBoard(gamekey):
     logging.info("looking for board %s" % (gamekey,))
     return db.Query(Board).filter('gameKey =', gamekey).get()
 
+GamePhases = util.enum('GamePhases', 'join', 'buildFirst', 'buildSecond', 'main')
+TurnPhases = util.enum('TurnPhases', 'buildInitialSettlement', 'buildInitialRoad', 'playKnightCard', 'mainTurn')
+
 class Board(db.Model):
     dateTimeStarted = db.DateTimeProperty()
     dateTimeEnded = db.DateTimeProperty()
@@ -26,7 +31,10 @@ class Board(db.Model):
     resources = db.StringListProperty()
     playerColors = db.StringListProperty()
     owner = db.UserProperty()
-    phase = db.StringProperty()
+    gamePhase = db.IntegerProperty()
+    currentPlayer = db.IntegerProperty()
+    turnPhase = db.IntegerProperty()
+    playOrder = db.ListProperty(int)
     
     #TODO: add all deck of development cards
     def getVertexes(self):
