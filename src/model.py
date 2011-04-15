@@ -21,24 +21,61 @@ def findBoard(gamekey):
     logging.info("looking for board %s" % (gamekey,))
     return db.Query(Board).filter('gameKey =', gamekey).get()
 
-def queryBoards(offset, limit, **kwargs):
+def queryBoards(offset, limit, filters, sorting):
     q = db.Query(Board)
     
-    if not kwargs.get("gamekey", None) is None:
-        q.filter("gameKey = ", kwargs["gamekey"])
+    if filters is None: 
+        filters = []
     
-    if not kwargs.get("user", None) is None and kwargs["user"] > 0:
-        pq = db.Query(Player, keys_only=True).filter('user = ', kwargs["user"])
-        keys = [x.parent() for x in pq]
-        logging.info(len(keys))
-        q.filter('__key__ IN ', keys)    
+    if sorting is None:
+        sorting = []
     
+    for f in filters:
+        field = ''
+        value = None
+        op = '='
+        if(len(f) == 2):
+            field = f[0]
+            value = f[1]
+        elif(len(f) == 3):
+            field = f[0]
+            op = f[1]
+            value = f[2]
+        else:
+            # raise exception
+            return []
+        
+        props = Board.properties()
+        
+        # handle users as a special case
+        if field == 'user' and op == '=':
+            pq = db.Query(Player, keys_only=True).filter('user = ', value)
+            keys = [x.parent() for x in pq]
+            q.filter('__key__ IN ', keys)
+            break;
+        elif field=='user':
+            # raise exception, no operations other than = are supported on users
+            return []
+        elif field=='gameKey' and op != '=':
+            # raise exception
+            return []
+        
+        if not props.get(field, None) is None:
+            #TODO: more error checking here
+            q.filter('%s %s' % (field, op), value)
+    
+    #TODO: error check the sort fields
+    for s in sorting:
+        q.order(s)
+        
+            
     return q.fetch(limit, offset)
 
 GamePhases = util.enum('GamePhases', 'join', 'buildFirst', 'buildSecond', 'main')
 TurnPhases = util.enum('TurnPhases', 'buildInitialSettlement', 'buildInitialRoad', 'playKnightCard', 'mainTurn')
 
 class Board(db.Model):
+    dateTimeCreated = db.DateTimeProperty()
     dateTimeStarted = db.DateTimeProperty()
     dateTimeEnded = db.DateTimeProperty()
     gameKey = db.StringProperty()
@@ -49,6 +86,7 @@ class Board(db.Model):
     currentPlayer = db.IntegerProperty()
     turnPhase = db.IntegerProperty()
     playOrder = db.ListProperty(int)
+    winner = db.UserProperty()
     
     #TODO: add all deck of development cards
     def getVertexes(self):

@@ -55,7 +55,7 @@ class BoardTemplate(object):
     def instantiateModel(self, gameKey, owner):
         board = model.Board()
         board.gameKey = gameKey
-        board.dateTimeStarted = datetime.datetime.now()
+        board.dateTimeCreated = datetime.datetime.now()
         board.resources = self.resources
         board.playerColors = self.colors
         board.owner = owner
