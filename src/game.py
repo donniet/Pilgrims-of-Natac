@@ -39,7 +39,7 @@ class MainHandler(webapp.RequestHandler):
         template_params = {
             'games': model.pagedBoards(0, 1000),
             'nick': user.nickname(),
-            'imageUrl' : model.userPicture()
+            'imageUrl' : model.userPicture(user.email())
         }
                 
         path = os.path.join(os.path.dirname(__file__), 'templates/main.xhtml')

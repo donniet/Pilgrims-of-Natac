@@ -18,6 +18,34 @@ function Player() {
     this.playerHash_ = "";
 }
 
+
+Player.nameToColorMap = {
+	"blue": "#0000FF",
+	"red": "#FF0000",
+	"green": "#00FF00",
+	"orange": "orange",
+	"white": "#FFFFFF",
+	"brown": "brown"
+};
+
+Player.prototype.loadJSON = function (json) {
+    // TODO: Update loading
+	this.colorName_ = json["color"];
+	this.color_ = typeof Player.nameToColorMap[this.colorName_] != "undefined" ? Player.nameToColorMap[this.colorName_] : this.colorName_;
+	this.name_ = json["user"]["nickname"];
+	this.image_ = json["userpicture"];
+
+	for(var i = 0; json["playerResources"] && i < json["playerResources"].length; i++) {
+		var r = json["playerResources"][i];
+		this.resources.push({
+			resourceName_: r["resource"],
+			resourceCount_: r["amount"]
+		})
+	}
+	
+    Event.fire(this, "playerload", [this]);
+}
+
 Player.prototype.loadPlayer = function (source) {
     // TODO: Update loading
 
