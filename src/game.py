@@ -36,13 +36,18 @@ class MainHandler(webapp.RequestHandler):
         
 
         # query only games you have joined
-        query_opts = {
-            #'user': user
-        }
+        query_filters = [
+            ('user', user),
+            #('dateTimeCreated <', datetime.datetime.now().)
+            #('gameKey', gameKey)
+        ]
+        sort_options = [
+            "-dateTimeStarted",
+        ]
                     
         template_params = {
             #'games': model.pagedBoards(0, 1000),
-            'games': model.queryBoards(0, 100, **query_opts),
+            'games': model.queryBoards(0, 100, query_filters, sort_options),
             'nick': user.nickname(),
             'imageUrl' : model.userPicture(user.email())
         }
