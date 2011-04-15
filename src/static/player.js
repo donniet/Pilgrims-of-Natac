@@ -34,7 +34,7 @@ Player.prototype.loadJSON = function (json) {
 	this.name_ = json["user"]["nickname"];
 	this.image_ = json["userpicture"];
 
-	for(var i = 0; i < json["playerResources"].length; i++) {
+	for(var i = 0;  json["playerResources"] && i < json["playerResources"].length; i++) {
 		var r = json["playerResources"][i];
 		this.resources.push({
 			resourceName_: r["resource"],
