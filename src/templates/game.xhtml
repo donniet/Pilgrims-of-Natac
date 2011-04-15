@@ -12,7 +12,7 @@
 <!-- <script type="text/javascript" src="/static/json.js"></script> -->
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js" type="text/javascript"></script>
 <script type="text/javascript" src="/static/event.js"></script>
-<script type="text/javascript" src="/static/player.js"></script>
+<script type="text/javascript" src="/static/player.jq.js"></script>
 <script type="text/javascript" src="/static/board.js"></script>
 <script type="text/javascript" src="/_ah/channel/jsapi"></script>
 <script type="text/javascript">//<![CDATA[
@@ -42,7 +42,8 @@ player1.color_ = "#FF0000";
 player1.colorName_ = "Red";
 player1.active_ = false;
 player1.isLocal_ = true;
-player1.resources_ = [{resourceName_: "Ore"}, {resourceName_: "Ore"}, {resourceName_: "Grain"}, {resourceName_: "Wood"}];
+//player1.resources_ = [{resourceName_: "Ore"}, {resourceName_: "Ore"}, {resourceName_: "Grain"}, {resourceName_: "Wood"}];
+player1.resources_ = [{"amount": 1, "resource": "ore"}, {"amount": 3, "resource": "wheat"}, {"amount": 0, "resource": "wood"}, {"amount": 0, "resource": "brick"}, {"amount": 0, "resource": "sheep"}];
 player1.bonuses_ = [{bonusName_: "Monopoly"}, {bonusName_: "Soldier"}];
 
 function getBoard(board) {
@@ -247,24 +248,24 @@ function updatePlayer() {
         <h3>Resources</h3>
         <div id="pp-resources">
             <div class="pp-res">
-                <div id="pp-res-card-sheep" class="card"><div class="sheep"></div></div>
-                <div id="pp-res-sheep">8</div>
+                <div id="pp-res-card-sheep" class="card" title="Sheep"><div class="sheep"></div></div>
+                <div id="pp-res-sheep">0</div>
             </div>
             <div class="pp-res">
-                <div id="pp-res-card-wheat" class="card"><div class="wheat"></div></div>
-                <div id="pp-res-wheat">7</div>
+                <div id="pp-res-card-wheat" class="card" title="Wheat"><div class="wheat"></div></div>
+                <div id="pp-res-wheat">0</div>
             </div>
             <div class="pp-res">
-                <div class="card"><div class="wood"></div></div>
-                <div id="pp-res-wood">2</div>
+                <div id="pp-res-card-wood" class="card" title="Wood"><div class="wood"></div></div>
+                <div id="pp-res-wood">0</div>
             </div>
             <div class="pp-res">
-                <div class="card"><div class="rock"></div></div>
-                <div id="pp-res-rock">1</div>
+                <div id="pp-res-card-rock" class="card" title="Ore"><div class="rock"></div></div>
+                <div id="pp-res-rock">0</div>
             </div>
             <div class="pp-res">
-                <div class="card"><div class="clay"></div></div>
-                <div id="pp-res-clay">8</div>
+                <div id="pp-res-card-clay" class="card" title="Clay"><div class="clay"></div></div>
+                <div id="pp-res-clay">0</div>
             </div>
         </div>
         <h3>Bonuses</h3>

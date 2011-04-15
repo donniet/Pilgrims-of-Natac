@@ -141,28 +141,39 @@ PlayerView.prototype.render = function (el) {
     Event.addListener(this.player_, "playerload", this.handleUpdate, this);
 }
 PlayerView.prototype.renderResources = function () {
-    while (this.resourcesEl_.firstChild)
-        this.resourcesEl_.removeChild(this.resourcesEl_.firstChild);
 
-    for (var i = 0; i < this.player_.resources_.length; i++) {
-        //alert(this.player_.resources_[i]);
-        this.renderResource(this.player_.resources_[i], this.resourcesEl_);
-    }
-    $("#pp-res-sheep").html("1");
-    $("#pp-res-wheat").html("2");
-    $("#pp-res-wood").html("3");
-    $("#pp-res-rock").html("4");
-    $("#pp-res-clay").html("5");
+    var _p = this;
 
-    //TODO: attack click events to the resource cards.
+    var _find = function(resourceType) {
+        return _p.findResource(resourceType);
+    };
+
+    $("#pp-res-sheep").html( _find("sheep").amount );
+    $("#pp-res-wheat").html( _find("wheat").amount );
+    $("#pp-res-wood").html( _find("wood").amount );
+    $("#pp-res-rock").html( _find("ore").amount );
+    $("#pp-res-clay").html( _find("brick").amount );
+    
     $('[id^="pp-res-card"]').click( function() {
-        alert(this.id);
-        // TODO: Strip the resource from the div and
-        //       look it up in a dict
-        var resource;
-        Event.fire(this, "resourceclick", [resource, this.player_]);
+        var ar_k = this.id.split("-");
+        var k = ar_k[ar_k.length-1];
+        
+        var res = _find( k );
+        alert("clicked " + res.resource);
+        Event.fire(this, "resourceclick", [res, this.player_]);
     });
 }
+
+PlayerView.prototype.findResource = function(resourceType) {
+    for (var i = 0; i < this.player_.resources_.length; i++) {
+        if( this.player_.resources_[i].resource == resourceType ){
+            return this.player_.resources_[i];
+        }
+    }
+    // return something so we avoid null's
+    return {"amount":0,"resource":resourceType};
+}
+
 PlayerView.prototype.renderBonuses = function () {
     while (this.bonusesEl_.firstChild)
         this.bonusesEl_.removeChild(this.bonusesEl_.firstChild);
