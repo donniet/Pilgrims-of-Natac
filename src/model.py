@@ -21,6 +21,20 @@ def findBoard(gamekey):
     logging.info("looking for board %s" % (gamekey,))
     return db.Query(Board).filter('gameKey =', gamekey).get()
 
+def queryBoards(offset, limit, **kwargs):
+    q = db.Query(Board)
+    
+    if not kwargs.get("gamekey", None) is None:
+        q.filter("gameKey = ", kwargs["gamekey"])
+    
+    if not kwargs.get("user", None) is None and kwargs["user"] > 0:
+        pq = db.Query(Player, keys_only=True).filter('user = ', kwargs["user"])
+        keys = [x.parent() for x in pq]
+        logging.info(len(keys))
+        q.filter('__key__ IN ', keys)    
+    
+    return q.fetch(limit, offset)
+
 GamePhases = util.enum('GamePhases', 'join', 'buildFirst', 'buildSecond', 'main')
 TurnPhases = util.enum('TurnPhases', 'buildInitialSettlement', 'buildInitialRoad', 'playKnightCard', 'mainTurn')
 
