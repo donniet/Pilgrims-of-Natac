@@ -37,10 +37,10 @@ Player.prototype.loadJSON = function (json) {
 
 	for(var i = 0; json["playerResources"] && i < json["playerResources"].length; i++) {
 		var r = json["playerResources"][i];
-		this.resources.push({
-			resourceName_: r["resource"],
-			resourceCount_: r["amount"]
-		})
+		this.resources_.push({
+			resource: r["resource"],
+			amount: r["amount"]
+		});
 	}
 	
     Event.fire(this, "playerload", [this]);
@@ -169,14 +169,13 @@ PlayerView.prototype.render = function (el) {
     Event.addListener(this.player_, "playerload", this.handleUpdate, this);
 }
 PlayerView.prototype.renderResources = function () {
-
     var _p = this;
 
     var _find = function(resourceType) {
         return _p.findResource(resourceType);
     };
 
-    $("#pp-res-sheep").html( _find("sheep").amount );
+    $("#pp-res-sheep").html( _find("wool").amount );
     $("#pp-res-wheat").html( _find("wheat").amount );
     $("#pp-res-wood").html( _find("wood").amount );
     $("#pp-res-rock").html( _find("ore").amount );
@@ -193,6 +192,7 @@ PlayerView.prototype.renderResources = function () {
 }
 
 PlayerView.prototype.findResource = function(resourceType) {
+	console.log("looking for " + resourceType);
     for (var i = 0; i < this.player_.resources_.length; i++) {
         if( this.player_.resources_[i].resource == resourceType ){
             return this.player_.resources_[i];

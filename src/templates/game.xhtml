@@ -32,20 +32,6 @@ jQuery.postJSON = function(url, args, callback) {
     }});
 };
 
-var player1 = new Player();
-player1.score_ = 7;
-player1.name_ = "Donnie";
-player1.image_ = "";
-player1.resourceCount_ = 4;
-player1.bonusCount_ = 2;
-player1.color_ = "#FF0000";
-player1.colorName_ = "Red";
-player1.active_ = false;
-player1.isLocal_ = true;
-//player1.resources_ = [{resourceName_: "Ore"}, {resourceName_: "Ore"}, {resourceName_: "Grain"}, {resourceName_: "Wood"}];
-player1.resources_ = [{"amount": 1, "resource": "ore"}, {"amount": 3, "resource": "wheat"}, {"amount": 0, "resource": "wood"}, {"amount": 0, "resource": "brick"}, {"amount": 0, "resource": "sheep"}];
-player1.bonuses_ = [{bonusName_: "Monopoly"}, {bonusName_: "Soldier"}];
-
 function getBoard(board) {
     jQuery.getJSON("/game/{{gamekey}}/currentBoard", function(data) {
         board.loadJSON(data);
@@ -186,10 +172,32 @@ function joingame() {
 }
 
 function handleLoad() {
+	var player1 = new Player();
+	jQuery.getJSON("/game/{{gamekey}}/currentPlayer", function(data) {
+        player1.loadJSON(data);
+		player1.isLocal_ = true;
+		var playerView1 = new PlayerView(player1);
+    	playerView1.render(document.getElementById("player1"));
+    });
+	
+/*
+	player1.score_ = 7;
+	player1.name_ = "Donnie";
+	player1.image_ = "";
+	player1.resourceCount_ = 4;
+	player1.bonusCount_ = 2;
+	player1.color_ = "#FF0000";
+	player1.colorName_ = "Red";
+	player1.active_ = false;
+	player1.isLocal_ = true;
+	//player1.resources_ = [{resourceName_: "Ore"}, {resourceName_: "Ore"}, {resourceName_: "Grain"}, {resourceName_: "Wood"}];
+	player1.resources_ = [{"amount": 1, "resource": "ore"}, {"amount": 3, "resource": "wheat"}, {"amount": 0, "resource": "wood"}, {"amount": 0, "resource": "brick"}, {"amount": 0, "resource": "sheep"}];
+	player1.bonuses_ = [{bonusName_: "Monopoly"}, {bonusName_: "Soldier"}];
+
 
     var playerView1 = new PlayerView(player1);
     playerView1.render(document.getElementById("player1"));
-
+*/
     loadBoard()  
     
     
