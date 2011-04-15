@@ -105,9 +105,11 @@ Board.prototype.placeSettlement = function(x, y, color) {
 				model: "settlement",
 				player: "player-" + color
 			});
-	   		break;
+			this.clearHighlights();
+			return true;
         }
     }
+	return false;
 }
 Board.prototype.placeCity = function(x, y, color) {
     for(var i = 0; i < this.vertex_.length; i++) {
@@ -118,9 +120,11 @@ Board.prototype.placeCity = function(x, y, color) {
 				model: "city",
 				player: "player-" + color
 			});
-			break;
+			this.clearHighlights();
+			return true;
         }
     }
+	return false;
 }
 Board.prototype.placeRoad = function(x1, y1, x2, y2, color) {
     for(var i = 0; i < this.edge_.length; i++) {
@@ -131,9 +135,11 @@ Board.prototype.placeRoad = function(x1, y1, x2, y2, color) {
 				model: "road",
 				player: "player-" + color
 			});
-			break;
+			this.clearHighlights();
+			return true;
 		}
     }
+	return false;
 }
 Board.prototype.addListener = function (event, listener) {
     if (typeof this.listeners_[event] == "undefined") {
@@ -508,15 +514,21 @@ Board.prototype.highlightBuildableVertex = function(player) {
 			buildable = false;
 
 		if(buildable) {
-			this._highlight(v.svgEl_.firstChild);
-			console.log("found one!");
+			console.log("buildabl!" + v.svgEl_.firstChild.getAttribute("class"));
+			var el = null;
+			for(el = v.svgEl_.firstChild; el && !/\bvertex\b/.test(el.getAttribute("class")); el = el.nextSibling) {};
+
+			if(el) {
+				this._highlight(el);
+				console.log("found one!");
+			}
 		}
 	}
 }
 Board.prototype.highlightBuildableEdge = function(player) {
 	for(var i = 0; i < this.edge_.length; i++) {
 		var e = this.edge_[i];
-		var buildable = true;
+		var buildable = false;
 		if(e.edgeDevelopments_.length == 0) {
 			// is this road adjecent to any of the users cities/settlements?
 			var adjecentVertexDev = false;
@@ -546,15 +558,28 @@ Board.prototype.highlightBuildableEdge = function(player) {
 		}
 
 		if(buildable) {
-			this._highlight(e.svgEl_.firstChild);
-			console.log("found a road!");
+			var el = null;
+			for(el = e.svgEl_.firstChild; el && !/\bedge\b/.test(el.getAttribute("class")); el = el.nextSibling) {};
+
+			if(el) {
+				this._highlight(el);
+				console.log("found a road!");
+			}
 		}
 		
 	}
 }
 Board.prototype.clearHighlights = function() {
-	for(var i = 0; i < this.vertex_.length; i++) this._clearHighlight(this.vertex_[i].svgEl_.firstChild);
-	for(var i = 0; i < this.edge_.length; i++) this._clearHighlight(this.edge_[i].svgEl_.firstChild);
+	for(var i = 0; i < this.vertex_.length; i++) {
+		for(var el = this.vertex_[i].svgEl_.firstChild; el; el = el.nextSibling) {
+			this._clearHighlight(el);
+		}
+	}
+	for(var i = 0; i < this.edge_.length; i++) {
+		for(var el = this.edge_[i].svgEl_.firstChild; el; el = el.nextSibling) {
+			this._clearHighlight(el);
+		}
+	}
 }
 
 /* TODO: this function can almost certainly be optimized... */
