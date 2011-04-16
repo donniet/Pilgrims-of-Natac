@@ -85,4 +85,5 @@ Magic)
 [http://www.bonsai.com/wiki/howtos/vcs/git_remote_resolve/](Resolving
 Git Remote issues)
 
+[http://nvie.com/posts/a-successful-git-branching-model/](Successful Branching Model)
 
