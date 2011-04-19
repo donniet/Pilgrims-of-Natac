@@ -9,6 +9,7 @@ from google.appengine.ext.webapp.util import login_required
 
 from django.utils import simplejson as json
 
+import re
 import os.path
 import logging
 import model
@@ -46,9 +47,10 @@ class MainHandler(webapp.RequestHandler):
         ]
                     
         template_params = {
-            #'games': model.pagedBoards(0, 1000),
-            'games': model.queryBoards(0, 100, query_filters, sort_options),
+            'games': model.pagedBoards(0, 1000),
+            #'games': model.queryBoards(0, 100, query_filters, sort_options),
             'nick': user.nickname(),
+            'email': user.email(),
             'imageUrl' : model.userPicture(user.email())
         }
                 
@@ -190,7 +192,73 @@ class TestResourcesHandler(webapp.RequestHandler):
             logging.info("successful")
         
         json.dump(player, self.response.out, cls=model.BoardEncoder)
-           
+
+class GameListHandler(webapp.RequestHandler):
+    
+    def get(self):
+        filter_re = re.compile(r"(\w+)(<|>|=|<=|>=|\!=)(.+)")
+        email_re = re.compile(r"[A-Za-z][A-Za-z0-9_\-\.]*@[A-Za-z0-9\-\.]+")
+        date_re = re.compile(r"(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})")
+        #filter_re = re.compile(r"(P?<filt>\w+)(P?<op>\<|\>|\=|\<\=|\>\=|\!\=)(P?<arg>.+)")
+        user = users.get_current_user()
+        if not user:
+            json.dump({"error": "user not logged in."}, response.out)
+            return
+        
+        offset = 0
+        limit = 100
+        
+        try:
+            offset = int(self.request.get("offset"))
+        except:
+            pass
+    
+        try:
+            limit = int(self.request.get("limit"))
+        except:
+            pass
+        
+        filters = []
+        sorts = []
+        
+        sortf = self.request.get("sorts")
+        filterf = self.request.get("filter")
+        
+        if sortf:
+            sorts = sortf.split(",")
+        
+        if filterf:
+            filterarr = filterf.split(",")
+            for f in filterarr:
+                # ([A-Za-z0-9]+)((\<)|(\>)|(\=)|(\<\=)|(\>\=))([A-Za-z0-9]+)
+                m = filter_re.match(f)
+                if not m is None:
+                    filt = m.group(1)
+                    op = m.group(2)
+                    arg_str = m.group(3)
+                    
+                    logging.info("filter: %s %s %s" % (filt,op,arg_str))
+                    
+                    dm = date_re.match(arg_str)
+                    
+                    if arg_str.find("@") >= 0:
+                        arg = users.User(arg_str)
+                        logging.info("user: %s" % (arg,))
+                    elif not dm is None:
+                        arg = datetime.date(int(dm.group("year")), int(dm.group("month")), int(dm.group("day")))
+                    else:
+                        try:
+                            arg = json.loads("'%s'", (arg_str.escape(),))
+                        except:
+                            arg = arg_str
+                         
+                    filters.append((filt, op, arg))
+                else:
+                    logging.info("unmatched argument: %s" % (f,))
+                        
+        games = model.queryBoards(offset, limit, filters, sorts)
+        
+        json.dump(games, self.response.out, cls=model.GameListEncoder)
 
 class Application(webapp.WSGIApplication):
     live_games = dict()
@@ -213,13 +281,12 @@ class Application(webapp.WSGIApplication):
             (r"/game/(.*)/action", ActionHandler),
             (r"/game/(.*)/join", JoinHandler),
             (r"/game/(.*)/currentPlayer", CurrentPlayerByGameHandler),
+            (r"/gameList", GameListHandler),
             (r"/creategame", NewGameHandler),
             (r"/testModel", ModelTestHandler),
             (r"/testResources/(.*)/", TestResourcesHandler)
         ]
-        settings = dict(
-            debug=True
-        )
+        settings = dict(debug=True)
         webapp.WSGIApplication.__init__(self, handlers, **settings)
 
 application = Application()

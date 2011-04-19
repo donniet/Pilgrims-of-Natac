@@ -30,6 +30,8 @@ def queryBoards(offset, limit, filters, sorting):
     if sorting is None:
         sorting = []
     
+    logging.info("filter count %d" % (len(filters),))
+    
     for f in filters:
         field = ''
         value = None
@@ -52,23 +54,25 @@ def queryBoards(offset, limit, filters, sorting):
             pq = db.Query(Player, keys_only=True).filter('user = ', value)
             keys = [x.parent() for x in pq]
             q.filter('__key__ IN ', keys)
-            break;
         elif field=='user':
-            # raise exception, no operations other than = are supported on users
+            #TODO raise exception, no operations other than = are supported on users
             return []
-        elif field=='gameKey' and op != '=':
+        #elif field=='gameKey' and op != '=':
             # raise exception
-            return []
+        #    return []
         
-        if not props.get(field, None) is None:
+        elif not props.get(field, None) is None:
             #TODO: more error checking here
+            logging.info("misc field %s %s %s" % (field, op, value))
             q.filter('%s %s' % (field, op), value)
+        else:
+            logging.info("field not found '%s'" % (field,))
     
     #TODO: error check the sort fields
     for s in sorting:
         q.order(s)
         
-            
+    logging.info("limit: %s, offset: %s" %(limit, offset))
     return q.fetch(limit, offset)
 
 GamePhases = util.enum('GamePhases', 'join', 'buildFirst', 'buildSecond', 'main')
@@ -308,6 +312,48 @@ class CurrentPlayerEncoder(json.JSONEncoder):
             )
         else:
             return json.JSONEncoder.default(self, obj)
+
+class GameListEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Board):            
+            return dict(
+                dateTimeCreated = obj.dateTimeCreated,
+                dateTimeStarted = obj.dateTimeStarted,
+                dateTimeEnded = obj.dateTimeEnded,
+                gameKey = obj.gameKey,
+                players = db.Query(Player).ancestor(obj),
+                owner = obj.owner,
+                currentPlayer = obj.currentPlayer,
+                gamePhase = obj.gamePhase, #TODO: add gamephase enum
+                turnPhase = obj.turnPhase, #TODO: add turnphase enum
+                winner = obj.winner
+
+                #playOrder = db.ListProperty(int)
+            )
+        elif isinstance(obj, Player):
+            return dict(
+                color = obj.color,
+                user = dict(nickname=obj.user.nickname(), email=obj.user.email()),
+                # don't return all the resources with the board
+                #playerResources = db.Query(PlayerResources).ancestor(obj),
+                userpicture = userPicture(obj.user.email()),
+                score = obj.score
+                #TODO: Serialize resources and development cards here
+            )
+        elif isinstance(obj, db.Query):
+            ret = []
+            res = obj.fetch(1000)
+            for o in res:
+                ret.append(self.default(o))
+            return ret
+        elif isinstance(obj, users.User):
+            return dict(nickname=obj.nickname(), email=obj.email())
+        elif isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+        else:
+            #raise TypeError("%r is not JSON serializable" % (obj,))
+            return json.JSONEncoder.default(self, obj)
+
 
 class BoardEncoder(json.JSONEncoder):
     def default(self, obj):

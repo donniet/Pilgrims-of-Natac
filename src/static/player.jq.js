@@ -30,6 +30,7 @@ Player.nameToColorMap = {
 
 Player.prototype.loadJSON = function (json) {
     // TODO: Update loading
+    
 	this.colorName_ = json["color"];
 	this.color_ = typeof Player.nameToColorMap[this.colorName_] != "undefined" ? Player.nameToColorMap[this.colorName_] : this.colorName_;
 	this.name_ = json["user"]["nickname"];
