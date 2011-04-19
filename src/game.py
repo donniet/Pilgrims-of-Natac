@@ -51,6 +51,7 @@ class MainHandler(webapp.RequestHandler):
             #'games': model.queryBoards(0, 100, query_filters, sort_options),
             'nick': user.nickname(),
             'email': user.email(),
+            'gameListingUrl': '/gameList',
             'imageUrl' : model.userPicture(user.email())
         }
                 
