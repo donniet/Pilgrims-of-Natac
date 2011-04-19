@@ -290,27 +290,26 @@ GameListing.prototype.render = function(el) {
 	
 	this.refresh();
 }
-GameListing.prototype.handleSort = function(colindex) {
-	this.sortBy_ = colindex;
-	var col = this.columns_[colindex];
+GameListing.prototype.sortResults = function(sortby, ascending) {
+	if(sortby < 0 || sortby >= this.columns_.length) {
+		throw "sortResults: sortby index out of bounds";
+	}
+	this.sortBy_ = sortby;
 	
-	var i = 0;
-	for(i = 0; i < this.sorts_.length; i++) {
-		var s = this.sorts_[i];
-		if(col.field == this.sorts_[i].field) {
-			this.sorts_[i].desc = !this.sorts_[i].desc;
-			this.sortDir_ = this.sorts_[i].desc ? GameListing.SortDir.Ascending : GameListing.SortDir.Descending;
-			break;
-		}
+	if(typeof ascending == "undefined") {
+		this.sortDir_ = (this.sortDir_ == GameListing.SortDir.Ascending) ? GameListing.SortDir.Descending : GameListing.SortDir.Ascending;
 	}
-	console.log("handleSort: " + col.field);
-	if(i >= this.sorts_.length) {
-		this.sorts_ = [{field: col.field, desc: false}];
-		this.sortDir_ = GameListing.SortDir.Ascending;
-		console.log("no sorts found, added one.");
+	else {
+		this.sortDir_ = ascending ? GameListing.SortDir.Ascending : GameListing.SortDir.Descending;
 	}
+	
+	var col = this.columns_[this.sortBy_];
+	this.sorts_ = [{field: col.field, desc: (this.sortDir_ == GameListing.SortDir.Ascending)}];
 		
-	this.refresh();
+	if(this.el_) this.refresh();
+}
+GameListing.prototype.handleSort = function(colindex) {
+	this.sortResults(colindex);
 };
 GameListing.prototype.refresh = function() {
 	var self = this;
