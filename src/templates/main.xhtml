@@ -15,6 +15,7 @@
 
 $(document).ready(function() {
 	var gl = new GameListing("{{email}}", "{{gameListingUrl}}");
+	gl.sortResults(2, GameListing.SortDir.Descending);
 	gl.render(document.getElementById("gameListing"));
 });
 
