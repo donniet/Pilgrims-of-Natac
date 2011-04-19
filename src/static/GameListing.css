@@ -1,0 +1,28 @@
+.gameKey {
+	font-family:Courier New;
+}
+#gameListing>table tr>td:first-child {	
+	font-family: courier new;
+}
+#gameListing>table tr>th:first-child {
+	width:100px;
+}
+#gameListing>table tr>td {
+	vertical-align:top;
+	padding:5px;
+}
+#gameListing>table tr>td ul, #gameListing>table tr>td li {
+	display:block;
+	margin:0;
+	padding:0;
+}
+#gameListing>table tr>td.group {
+	font-family: Verdana, Arial, Sans-Serif;
+	border-bottom: solid 1px black;
+	background-color: #EEEEEE;
+}
+#gameListing>table th {
+	text-align: left;
+	font-weight: normal;
+	border-bottom: solid 2px black;
+}
