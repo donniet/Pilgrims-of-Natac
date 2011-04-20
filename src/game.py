@@ -197,7 +197,7 @@ class TestResourcesHandler(webapp.RequestHandler):
 class GameListHandler(webapp.RequestHandler):
     
     def get(self):
-        filter_re = re.compile(r"(\w+)(<|>|=|<=|>=|\!=)(.+)")
+        filter_re = re.compile(r"(\w+)\s*(<|>|=|<=|>=|\!=|[Ii][Nn])\s*(.+)")
         email_re = re.compile(r"[A-Za-z][A-Za-z0-9_\-\.]*@[A-Za-z0-9\-\.]+")
         date_re = re.compile(r"(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})")
         #filter_re = re.compile(r"(P?<filt>\w+)(P?<op>\<|\>|\=|\<\=|\>\=|\!\=)(P?<arg>.+)")
@@ -249,7 +249,7 @@ class GameListHandler(webapp.RequestHandler):
                         arg = datetime.date(int(dm.group("year")), int(dm.group("month")), int(dm.group("day")))
                     else:
                         try:
-                            arg = json.loads("'%s'", (arg_str.escape(),))
+                            arg = json.loads("%s", (arg_str,))
                         except:
                             arg = arg_str
                          

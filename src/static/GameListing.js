@@ -22,12 +22,56 @@ Date.parseISO = function(str) {
 	}
 	return null;
 }
-
+Date.prototype.toISOString = function() {
+	return this.getFullYear()+"-"+(this.getMonth()+1)+"-"+this.getDate()+"T"+this.getHours()+":"+this.getMinutes()+":"+this.getSeconds()+"."+(this.getMilliseconds()*100);
+}
 Date.prototype.format = function(format) {
 	var mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 	
 	return mon[this.getMonth()] + " " + this.getDate()+ ", " + this.getFullYear();
 	
+}
+
+Date.prototype.toJSON = function(formatter) {
+	return this.toISOString();
+}
+
+Object.prototype.toJSON = function(formatter) {
+	return this.toString();
+}
+
+function evalScope(str, obj) {
+	var o = new Evalable();
+	for(var k in obj) {
+		o[k] = obj[k];
+	}
+	
+	return o.eval(str);
+}
+
+function Column(heading, valueBinding) {
+	this.heading_ = heading;
+	this.valueBinding_ = valueBinding;
+	this.displayBinding_ = null;
+	this.sortable_ = false;
+	this.sortGroups_ = new Array();
+	this.colindex_ = -1;
+}
+Column.prototype.evalColumn = function(row, rowindex, binding) {
+	var p = {
+		data: row,
+		col: this.colindex_,
+		row: rowindex,
+		coldata: this
+	};
+	
+	if(typeof binding == "string") {
+		return evalScope(binding, p);
+	}
+	else if(typeof binding == "function") {
+		return binding(p);
+	}
+	else return null;
 }
 
 function GameListing(userEmail, url) {
@@ -54,6 +98,10 @@ function GameListing(userEmail, url) {
 	this.limit_ = 100;
 	this.offset_ = 0;
 }
+GameListing.prototype.addColumn = function(column) {
+	this.columns_.push(column);
+	return this.columns_.length - 1;
+}
 GameListing.SortDir = {Ascending:"ASC", Descending:"DESC"};
 GameListing.anchorBinding = function(text, href, opts) {
 	var a = document.createElement("a");
@@ -64,7 +112,7 @@ GameListing.anchorBinding = function(text, href, opts) {
 GameListing.dateGrouping = function(valueStr, row, results) {
 	var now = new Date();
 	var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-	var sunday = today.addDays(today.getDay());
+	var sunday = today.addDays(-today.getDay());
 	var lastsunday = sunday.addDays(-7);
 	
 	var value = Date.parseISO(valueStr);
@@ -247,8 +295,11 @@ GameListing.prototype.handleResults = function(results) {
 		this.tbody_.appendChild(tr);
 	}
 };
+GameListing.prototype.addFilter = function(field, value, op) {
+	this.filters_.push({field:field, value:value, op:op});
+}
 GameListing.prototype.createParams = function() {
-	var sort = ""
+	var sort = "";
 	console.log("about to sort" + this.sorts_.length);
 	for(var i = 0; i < this.sorts_.length; i++) {
 		console.log("sorts");
@@ -258,9 +309,16 @@ GameListing.prototype.createParams = function() {
 		
 		if(i < this.sorts_.length - 1) sort += ",";
 	}
+	var filter = "";
+	for(var i = 0; i < this.filters_.length; i++) {
+		console.log("filters");
+		var f = this.filters_[i];
+		//TODO: json encode value
+		filter += f.field + (f.op ? f.op : "=") + f.value;
+	}
 	return {
 		sorts: sort,
-		filter: "",
+		filter: filter,
 		limit: this.limit_,
 		offset: this.offset_
 	};
