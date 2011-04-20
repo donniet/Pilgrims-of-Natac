@@ -132,18 +132,39 @@ GameListing.prototype.playerBinding = function(el, data, coldef, row, column, ga
 	el.appendChild(ul);
 }
 GameListing.prototype.joinBinding = function(el, data, coldef, row, column, gameListing) {
-	for(var i = 0; i < data.players.length; i++) {
+	var ul = document.createElement("ul");
+	
+	var li = document.createElement("li");
+	
+	var joined = false;
+	for(var i = 0; !joined && i < data.players.length; i++) {
 		var p = data.players[i];
 		if(p.user.email == gameListing.userEmail_) {
-			el.appendChild(document.createTextNode("joined"));
-			return;
+			li.appendChild(document.createTextNode("joined"));
+			joined = true;
 		}
 	}
 	
+	if(!joined) {
+		var a = document.createElement("a");
+		a.appendChild(document.createTextNode("join"));
+		//TODO: remove hyperlink structure
+		a.href = "/game/" + data.gameKey + "/join";
+		li.appendChild(a);
+	}
+	
+	ul.appendChild(li);
+	
+	li = document.createElement("li");
+		
 	var a = document.createElement("a");
-	a.appendChild(document.createTextNode("join"));
-	a.href = "/game/" + data.gameKey + "/join";
-	el.appendChild(a);
+	a.appendChild(document.createTextNode("view"));
+	a.href = "/game/" + data.gameKey + "/";
+	li.appendChild(a);
+	
+	ul.appendChild(li);
+	
+	el.appendChild(ul);
 }
 GameListing.prototype.createdBinding = function(el, data, coldef, row, column) {
 	
