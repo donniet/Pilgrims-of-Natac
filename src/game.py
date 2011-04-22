@@ -34,17 +34,6 @@ class MainHandler(webapp.RequestHandler):
         if not user:
             self.redirect(users.create_login_url(self.request.uri))
             return
-        
-
-        # query only games you have joined
-        query_filters = [
-            ('user', user),
-            #('dateTimeCreated <', datetime.datetime.now().)
-            #('gameKey', gameKey)
-        ]
-        sort_options = [
-            "-dateTimeStarted",
-        ]
                     
         template_params = {
             'games': model.pagedBoards(0, 1000),
@@ -203,7 +192,7 @@ class GameListHandler(webapp.RequestHandler):
         #filter_re = re.compile(r"(P?<filt>\w+)(P?<op>\<|\>|\=|\<\=|\>\=|\!\=)(P?<arg>.+)")
         user = users.get_current_user()
         if not user:
-            json.dump({"error": "user not logged in."}, response.out)
+            json.dump({"error": "user not logged in."}, self.response.out)
             return
         
         offset = 0

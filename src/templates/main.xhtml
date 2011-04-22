@@ -22,6 +22,7 @@ $(document).ready(function() {
 	var lastsunday = sunday.addDays(-7);
 	
 	var gl = new GameListing("{{email}}", "{{gameListingUrl}}");
+	gl.setLimit(25);
 	
 	var createdCol = new Column("Date.parseISO(this.data.dateTimeCreated)").setHeading("Created").setSortable(true).setSortField("dateTimeCreated").setDisplayBinding("this.data.dateTimeCreated ? Date.parseISO(this.data.dateTimeCreated).format() : 'ongoing'");
 	createdCol.setGroups([lastsunday, sunday, yesterday, today]).setGroupNames(["More Than Two Weeks Ago", "Last Week", "This Week", "Yesterday", "Today"]);
@@ -35,7 +36,20 @@ $(document).ready(function() {
 	//gl.sortResults(2, GameListing.SortDir.Descending);
 	//gl.addFilter("owner", "{{email}}");
 	//gl.addFilter("owner", "test2@testdomain.com");
+	createdCol.sort();
 	gl.render(document.getElementById("gameListing"));
+	
+	$("#mygames").click(function() {
+		gl.clearFilters();
+		gl.clearSorts();
+		gl.addFilter("user", "{{email}}");
+		createdCol.sort();
+	});
+	$("#findgames").click(function() {
+		gl.clearFilters();
+		gl.clearSorts();
+		createdCol.sort();
+	});
 });
 
 //]]></script>
@@ -49,6 +63,8 @@ $(document).ready(function() {
 </div>
 
 <a href="/creategame">Create Game</a>
+<a href="javascript:void(0)" id="mygames">My Games</a>
+<a href="javascript:void(0)" id="findgames">Find Games</a>
 
 <div id="gameListing">
 

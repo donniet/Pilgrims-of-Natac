@@ -367,17 +367,7 @@ function GameListing(userEmail, url) {
 	this.el_ = null;
 	this.tbody_ = null;
 	
-	//TODO: I don't like the binding mechanism.
-	this.columns_ = [
-	    /*
-		{heading:"Game Key", binding: "GameListing.anchorBinding(this.data.gameKey, '/game/'+this.data.gameKey+'/')", value:"this.data.gameKey", field:"gameKey", sortable:true, className:"gameKey"},
-		{heading:"Owner", binding: "this.data.owner.nickname", value:"this.data.owner", field:"owner", sortable:true, className:"owner"},
-		{heading:"Created", grouping:GameListing.dateGrouping, value:"this.data.dateTimeCreated", binding: "Date.parseISO(this.data.dateTimeCreated).format()", field:"dateTimeCreated", sortable:true, className:"created"},
-		{heading:"Ended", grouping:GameListing.dateGrouping, value:"this.data.dateTimeEnded", binding:"this.data.dateTimeEnded ? Date.parseISO(this.data.dateTimeEnded).format() : 'ongoing'", field:"dateTimeEnded", sortable:true},
-		{heading:"Players", binding: this.playerBinding, value:"this.data.players", field:"players", sortable:false }, 
-		{heading:"", binding: this.joinBinding, sortable: false, className: "commands"}
-		*/
-	];
+	this.columns_ = new Array();
 	
 	this.sortBy_ = -1;
 	this.sorts_ = [];
@@ -391,45 +381,6 @@ GameListing.prototype.addColumn = function(column) {
 	column.listing_ = this;
 	this.columns_.push(column);
 	return index;
-}
-GameListing.anchorBinding = function(text, href, opts) {
-	var a = document.createElement("a");
-	a.href = href;
-	a.appendChild(document.createTextNode(text));
-	return a;
-}
-GameListing.dateGrouping = function(valueStr, row, results) {
-	var now = new Date();
-	var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-	var sunday = today.addDays(-today.getDay());
-	var lastsunday = sunday.addDays(-7);
-	
-	var value = Date.parseISO(valueStr);
-	
-	if(!value) {
-		return "Ongoing";
-	}
-	else if(value > today) {
-		console.log("group: Today");
-		return "Today";
-	}
-	else if(value > today.addDays(-1)) {
-		console.log("group: yesterday");
-		return "Yesterday";
-	}
-	else if(value > sunday) {
-		console.log("group: This"); 
-		return "This Week";
-	}
-	else if(value > lastsunday) {
-		console.log("group: Last");
-		return "Last Week";
-	}
-	else if(value <= lastsunday) {
-		console.log("group: More: " + value); 
-		return "More than two weeks ago";
-	}
-	
 }
 GameListing.prototype.nextPage = function() {
 	//HACK: this should be smarter-- maybe see if the result set is empty
@@ -485,6 +436,13 @@ GameListing.prototype.handleResults = function(results) {
 GameListing.prototype.addFilter = function(field, value, op) {
 	this.filters_.push({field:field, value:value, op:op});
 }
+GameListing.prototype.clearFilters = function() {
+	for(var i = 0; i < this.filters_.length; i++) {
+		delete this.filters_[i];
+	}
+	delete this.filters_;
+	this.filters_ = new Array();
+}
 GameListing.prototype.render = function(el) {
 	var self = this;
 	this.el_ = el;
@@ -530,6 +488,9 @@ GameListing.prototype.sortResults = function(sortby, descending) {
 	this.sorts_ = [{field: col.getSortField(), desc: !descending}];
 		
 	if(this.el_) this.refresh();
+}
+GameListing.prototype.clearSorts = function() {
+	this.sorts_ = new Array();
 }
 GameListing.prototype.handleSort = function(colindex) {
 	this.sortResults(colindex);
