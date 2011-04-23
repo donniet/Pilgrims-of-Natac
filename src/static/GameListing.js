@@ -271,15 +271,33 @@ ActionsColumn.prototype.render = function(el, row, rowindex) {
 	
 	el.appendChild(ul);
 }
+function PlayerColumn(valueBinding, playerUrlFormat) {
+	Column.apply(this, [valueBinding]);
+	this.playerUrlFormat_ = playerUrlFormat;
+}
+PlayerColumn.prototype = new Column();
+PlayerColumn.prototype.render = function(el, row, rowindex) {
+	var player = this.value(row, rowindex);
+	
+	if(player) {
+		var a = document.createElement("a");
+		a.href = this.playerUrlFormat_.replace("{email}", encodeURI(player.email));
+		a.appendChild(document.createTextNode(player.nickname));
+		el.appendChild(a);
+	}
+	else {
+		el.appendChild(document.createTextNode("unknown"));
+	}
+}
 
-function PlayersColumn(valueBinding) {
+function PlayerListColumn(valueBinding) {
 	Column.apply(this, [valueBinding]);
 }
-PlayersColumn.prototype = new Column();
-PlayersColumn.setSortable = function(sortable) {
+PlayerListColumn.prototype = new Column();
+PlayerListColumn.setSortable = function(sortable) {
 	if(sortable) throw "PlayersColumns cannot be sorted.";
 }
-PlayersColumn.prototype.render = function(el, row, rowindex) {
+PlayerListColumn.prototype.render = function(el, row, rowindex) {
 	var ul = document.createElement("ul");
 	var players = this.value(row, rowindex);
 	
@@ -294,7 +312,7 @@ PlayersColumn.prototype.render = function(el, row, rowindex) {
 		a.appendChild(document.createTextNode(p.user.nickname));
 		li.appendChild(a);
 		
-		li.appendChild(document.createTextNode(": " + p.score));
+		li.appendChild(document.createTextNode(" (" + p.score + ") "));
 		
 		ul.appendChild(li); 
 	}
@@ -474,6 +492,9 @@ GameListing.prototype.render = function(el) {
 	this.tbody_ = document.createElement("tbody");
 	t.appendChild(this.tbody_);
 	
+	var tfoot = document.createElement("tfoot");
+	t.appendChild(tfoot);
+	
 	this.el_.appendChild(t);
 	
 	this.refresh();
@@ -491,6 +512,7 @@ GameListing.prototype.sortResults = function(sortby, descending) {
 }
 GameListing.prototype.clearSorts = function() {
 	this.sorts_ = new Array();
+	this.sortBy_ = -1;
 }
 GameListing.prototype.handleSort = function(colindex) {
 	this.sortResults(colindex);
