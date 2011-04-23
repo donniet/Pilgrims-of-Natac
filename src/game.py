@@ -31,17 +31,23 @@ class ModelTestHandler(webapp.RequestHandler):
 class MainHandler(webapp.RequestHandler):
     def get(self):
         user = users.get_current_user()
+        
+        '''
         if not user:
             self.redirect(users.create_login_url(self.request.uri))
             return
-                    
+        '''   
+                 
         template_params = {
             'games': model.pagedBoards(0, 1000),
             #'games': model.queryBoards(0, 100, query_filters, sort_options),
-            'nick': user.nickname(),
-            'email': user.email(),
+            'user' : user,
             'gameListingUrl': '/gameList',
-            'imageUrl' : model.userPicture(user.email())
+            'imageUrl' : "" if user is None else model.userPicture(user.email()),
+            'loginUrl' : users.create_login_url(self.request.uri),
+            'logoutUrl' : users.create_logout_url(self.request.uri),
+            'loggedin' : (not user is None),
+            'creategameUrl' : '/creategame',
         }
                 
         path = os.path.join(os.path.dirname(__file__), 'templates/main.xhtml')
