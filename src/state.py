@@ -160,7 +160,7 @@ def get_game(gamekey):
 
 class GameState(object):
     board = None
-    colors = ["red", "blue", "green", "orange", "white", "brown"]
+    #colors = ["red", "blue", "green", "orange", "white", "brown"]
     log = []
     gamekey = None
     users = []
@@ -201,8 +201,44 @@ class GameState(object):
         player = self.board.getPlayer(user)
         
         return player
+    
+    def reserve(self, reservedFor, expirationMinutes):
+        reservationKey = None
         
-    def joinUser(self, user):
+        # first check if the user is already playing
+        p = self.board.getPlayer(reservedFor)
+        if p is not None:
+            return None
+        
+        # first check to see if we already have a reservation for this user
+        r = self.board.getReservationByUser(reservedFor)
+        if r is None:                
+            reservationKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(8))
+            self.board.addReservation(reservationKey, reservedFor, datetime.datetime.now() + datetime.timedelta(minutes=expirationMinutes))
+        else:
+            reservationKey = r.reservationKey
+        
+        return reservationKey
+    
+    def cancelReservation(self, reservationKey):
+        r = self.board.getReservation(reservationKey)
+        if r is None:
+            return False
+    
+        r.delete()
+        return True
+    
+    def joinByReservation(self, user, reservationKey):
+        r = self.board.getReservation(reservationKey)
+        
+        if r is None:
+            return None
+        
+        r.delete()
+        return self.joinUser(user, True)
+    
+    
+    def joinUser(self, user, byReservation=False):
         #all joined users must be registered
         self.registerUser(user)
         
@@ -210,11 +246,22 @@ class GameState(object):
         
         if p:
             return p.color
-        
+                
         cols = set(self.board.playerColors)
         players = self.board.getPlayers()
+        reservationCount = self.board.getReservationCount()
         
-        if len(players) >= len(cols):
+        # remove any reservations pending for this user
+        r = self.board.getReservationByUser(user)
+        if r is not None:
+            r.delete()
+            # since this guy was one of the spots reserved, don't check against other reservations
+            reservationCount = 0
+        
+        if byReservation:
+            reservationCount = 0
+        
+        if len(players) + reservationCount >= len(cols):
             return None
         
         for p in players:
@@ -223,7 +270,7 @@ class GameState(object):
                 return p.color
             else:
                 cols.remove(p.color)
-            
+        
         color = cols.pop()
             
         self.board.addPlayer(color, user)

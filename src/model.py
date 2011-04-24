@@ -114,8 +114,26 @@ class Board(db.Model):
         logging.info("player added: %s" % (user,))
         return p
     
+    def addReservation(self, reservationKey, reservedFor, expirationDateTime):
+        r = Reservation(parent=self, reservationKey=reservationKey, reservedFor=reservedFor, expirationDateTime=expirationDateTime)
+        r.put()
+        logging.info("reserved for: %s" %(reservedFor,))
+        return r
+    
     def getPlayer(self, user):
         return db.Query(Player).ancestor(self).filter('user =', user).get()
+    
+    def getReservations(self):
+        return db.Query(Reservation).ancestor(self).filter("expirationDateTime <", datetime.datetime.now()).fetch(100)
+    
+    def getReservationCount(self):
+        return db.Query(Reservation).ancestor(self).filter("expirationDateTime <", datetime.datetime.now()).count(100)
+    
+    def getReservation(self, reservationKey):
+        return db.Query(Reservation).ancestor(self).filter("reservationKey =", reservationKey).get()
+    
+    def getReservationByUser(self, user):
+        return db.Query(Reservation).ancestor(self).filter("reservedFor = ", user).get()
     
     def getPlayers(self):
         return db.Query(Player).ancestor(self).fetch(1000)
@@ -123,7 +141,10 @@ class Board(db.Model):
     def dump(self, fp):
         json.dump(self, fp, cls=BoardEncoder)
         
-        
+class Reservation(db.Model):
+    reservationKey = db.StringProperty()
+    reservedFor = db.UserProperty()
+    expirationDateTime = db.DateTimeProperty()  
 
 class DevelopmentType(db.Model):
     name = db.StringProperty()

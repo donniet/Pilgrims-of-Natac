@@ -210,6 +210,15 @@ function updatePlayer() {
     player1.loadPlayer();
 }
 
+function reserve() {
+	var reserveEmail = $('#reserveEmail').val();
+	jQuery.postJSON("{{reservationUrl}}", {reservedFor:reserveEmail}, function(data, xhr) {
+		if(data && data.reserved)
+			$('#reserveMessage').text("Sent Invitation.");
+		else
+			$('#reserveMessage').text("Invitation Failed to Send.");
+	});
+}
 
 
 //]]></script>
@@ -224,6 +233,10 @@ function updatePlayer() {
         {% else %}
         You are: <div class="player-{{ color }}" style="width:10px; height:10px; display:inline-block;"></div> {{ nick }} 
         {% endifequal %}
+        
+        {% if isOwner %}
+        	<input id="reserveEmail" type="text" /> <a href="javascript:void(0)" onclick="reserve()">Reserve</a> <span id="reserveMessage"></span>
+        {% endif %}
     </div>
 
     <div id="game-board">
