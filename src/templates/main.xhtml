@@ -22,29 +22,50 @@ $(document).ready(function() {
 	var sunday = today.addDays(-today.getDay());
 	var lastsunday = sunday.addDays(-7);
 	
-	var gl = new GameListing("{{email}}", "{{gameListingUrl}}");
-	gl.setLimit(25);
+	var gl = new GameListing("{{user.email}}", "{{gameListingUrl}}");
+	gl.setLimit(5);
 	
-	var createdCol = new Column("Date.parseISO(this.data.dateTimeCreated)").setHeading("Created").setSortable(true).setSortField("dateTimeCreated").setDisplayBinding("this.data.dateTimeCreated ? Date.parseISO(this.data.dateTimeCreated).format() : 'ongoing'");
+	var createdCol = new Column(function(row) { return Date.parseISO(row.data.dateTimeCreated); }).setHeading("Created").setSortable(true).setSortField("dateTimeCreated").setDisplayBinding(function(row) { return row.data.dateTimeCreated ? Date.parseISO(row.data.dateTimeCreated).format() : 'ongoing'; });
 	createdCol.setGroups([lastsunday, sunday, yesterday, today]).setGroupNames(["More Than Two Weeks Ago", "Last Week", "This Week", "Yesterday", "Today"]);
 	
 	//gl.addColumn(new Column("this.data.gameKey").setHeading("Game Key").setSortable(true).setSortField("gameKey"));
-	gl.addColumn(new PlayerColumn("this.data.owner", "/player?email={email}").setHeading("Owner").setSortable(true).setSortField("owner"));
+	gl.addColumn(new PlayerColumn(function(row) { return row.data.owner; }, "/player?email={email}").setHeading("Owner").setSortable(true).setSortField("owner"));
 	gl.addColumn(createdCol);
 	//gl.addColumn(new Column("this.data.dateTimeEnded").setHeading("Ended").setSortable(true).setSortField("dateTimeEnded").setDisplayBinding("this.data.dateTimeEnded ? Date.parseISO(this.data.dateTimeEnded).format() : 'ongoing'"));
-	gl.addColumn(new PlayerListColumn("this.data.players").setHeading("Players"));
-	gl.addColumn(new PlayerColumn("this.data.winner").setHeading("Winner").setSortable(true).setSortField("winner"));
-	gl.addColumn(new ActionsColumn("this.data.players", "'/game/'+this.data.gameKey+'/join'", "'/game/'+this.data.gameKey+'/'").setHeading("Actions"));
+	gl.addColumn(new PlayerListColumn(function(row) { return row.data.players; }).setHeading("Players"));
+	gl.addColumn(new PlayerColumn(function(row) { return row.data.winner; }).setHeading("Winner").setSortable(true).setSortField("winner"));
+	gl.addColumn(new ActionsColumn(function(row) { return row.data.players; }, function(row){return '/game/'+row.data.gameKey+'/join';}, function(row){return '/game/'+row.data.gameKey+'/';}).setHeading("Actions"));
 	//gl.sortResults(2, GameListing.SortDir.Descending);
 	//gl.addFilter("owner", "{{email}}");
 	//gl.addFilter("owner", "test2@testdomain.com");
-	//createdCol.sort();
+	//createdCol.sort();	
+	
+	Event.addListener(gl, "refresh", function() {
+		if(gl.hasNext()) {
+			$("#next").show();
+			$("#next2").show();
+		}
+		else {
+			$("#next").hide();
+			$("#next2").hide();
+		}
+		if(gl.hasPrev()) {
+			$("#previous").show();
+			$("#previous2").show();
+		}
+		else {
+			$("#previous").hide();
+			$("#previous2").hide();
+		}
+	});
+	
 	gl.render(document.getElementById("gameListing"));
+	
 	
 	$("#mygames").click(function() {
 		gl.clearFilters();
 		gl.clearSorts();
-		gl.addFilter("owner", "{{email}}");
+		gl.addFilter("owner", "{{user.email}}");
 		createdCol.sort(false);
 	});
 	$("#findgames").click(function() {
@@ -56,8 +77,9 @@ $(document).ready(function() {
 	$("#playedgames").click(function() {
 		gl.clearFilters();
 		gl.clearSorts();
-		gl.addFilter("user", "{{email}}");
+		gl.addFilter("user", "{{user.email}}");
 		createdCol.sort(false);
+		enablePrevNext();
 	});
 	$("#next").click(function() {
 		gl.nextPage();
@@ -107,9 +129,10 @@ $(document).ready(function() {
 			</div>
 			
 			
+			
 			<div id="topbuttonbox" class="buttonbox">
-				<a href="javascript:void(0)" id="next">Next</a>
 				<a href="javascript:void(0)" id="previous">Previous</a>
+				<a href="javascript:void(0)" id="next">Next</a>
 			</div>
 		</div>
 		
@@ -119,8 +142,8 @@ $(document).ready(function() {
 		
 		<div id="gameListingFoot">
 			<div id="bottombuttonbox" class="buttonbox">
-				<a href="javascript:void(0)" id="next2">Next</a>
 				<a href="javascript:void(0)" id="previous2">Previous</a>
+				<a href="javascript:void(0)" id="next2">Next</a>
 			</div>
 		</div>
 	
