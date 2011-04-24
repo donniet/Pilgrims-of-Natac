@@ -73,7 +73,8 @@ def queryBoards(offset, limit, filters, sorting):
         q.order(s)
         
     logging.info("limit: %s, offset: %s" %(limit, offset))
-    return q.fetch(limit, offset)
+    resultCount = q.count(1000);
+    return (resultCount, q.fetch(limit, offset));
 
 GamePhases = util.enum('GamePhases', 'join', 'buildFirst', 'buildSecond', 'main')
 TurnPhases = util.enum('TurnPhases', 'buildInitialSettlement', 'buildInitialRoad', 'playKnightCard', 'mainTurn')

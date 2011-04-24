@@ -13,13 +13,13 @@
     color:rgb(0,0,255);
 }
 .player-orange a {
-    color:rgb(255,100,100);
+    color:#FF9900;
 }
 .player-white a {
-    color:rgb(240,240,240);
+    color:#CCC;
 }
 .player-brown a {
-    color:rgb(150,50,150);
+    color:#CC6600;
 }
 
 #options {

@@ -241,6 +241,15 @@ ActionsColumn.prototype.render = function(el, row, rowindex) {
 	var ul = document.createElement("ul");
 	var li = document.createElement("li");
 	
+	var a = document.createElement("a");
+	a.appendChild(document.createTextNode("view"));
+	a.href = viewUrl;
+	li.appendChild(a);
+	
+	ul.appendChild(li);
+	
+	li = document.createElement("li");
+	
 	var joined = false;
 	for(var i = 0; !joined && i < players.length; i++) {
 		var p = players[i];
@@ -260,15 +269,7 @@ ActionsColumn.prototype.render = function(el, row, rowindex) {
 	
 	ul.appendChild(li);
 	
-	li = document.createElement("li");
-		
-	var a = document.createElement("a");
-	a.appendChild(document.createTextNode("view"));
-	a.href = viewUrl;
-	li.appendChild(a);
-	
-	ul.appendChild(li);
-	
+			
 	el.appendChild(ul);
 }
 function PlayerColumn(valueBinding, playerUrlFormat) {
@@ -392,6 +393,14 @@ function GameListing(userEmail, url) {
 	this.filters_ = [];
 	this.limit_ = 100;
 	this.offset_ = 0;
+	this.totalResults_ = 0;
+	this.hasResults_ = false;
+}
+GameListing.prototype.hasNext = function() {
+	return this.offset_ + this.limit_ < this.totalResults_;
+}
+GameListing.prototype.hasPrev = function() {
+	return this.offset_ > 0;
 }
 GameListing.prototype.addColumn = function(column) {
 	var index = this.columns_.length;
@@ -403,28 +412,31 @@ GameListing.prototype.addColumn = function(column) {
 GameListing.prototype.nextPage = function() {
 	//HACK: this should be smarter-- maybe see if the result set is empty
 	this.offset_ += this.limit_;
-	this.refresh();
+	if(this.hasResults_) this.refresh();
 }
 GameListing.prototype.prevPage = function() {
 	//HACK: see note on nextPage method
 	this.offset_ -= this.limit_;
-	this.refresh();
+	if(this.hasResults_) this.refresh();
 }
 GameListing.prototype.setLimit = function(limit) {
 	if(limit > 0) {
 		this.limit_ = limit;
 		//QUESTION: Should we go back to the first page?
 		this.offset_ = 0;
-		this.refresh();
+		if(this.hasResults_) this.refresh();
 	}
 }
-GameListing.prototype.handleResults = function(results) {
+GameListing.prototype.handleResults = function(ret) {
 	for(var i = this.tbody_.childNodes.length - 1; i >= 0; i--) {
 		this.tbody_.removeChild(this.tbody_.childNodes[i]);
 	}
 	
 	var group = null;
 	
+	this.totalResults_ = ret["resultCount"];
+	var results = ret["results"];
+		
 	for(var i = 0; i < results.length; i++) {
 		var r = results[i];
 		var tr = document.createElement("tr");
@@ -450,6 +462,8 @@ GameListing.prototype.handleResults = function(results) {
 		}
 		this.tbody_.appendChild(tr);
 	}
+	this.hasResults_ = true;
+	Event.fire(this, "refresh", []);
 };
 GameListing.prototype.addFilter = function(field, value, op) {
 	this.filters_.push({field:field, value:value, op:op});
@@ -508,7 +522,7 @@ GameListing.prototype.sortResults = function(sortby, descending) {
 	var col = this.columns_[this.sortBy_];
 	this.sorts_ = [{field: col.getSortField(), desc: !descending}];
 		
-	if(this.el_) this.refresh();
+	if(this.hasResults_) this.refresh();
 }
 GameListing.prototype.clearSorts = function() {
 	this.sorts_ = new Array();

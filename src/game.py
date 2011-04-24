@@ -5,7 +5,7 @@ from google.appengine.api import users
 from google.appengine.api import channel
 from google.appengine.ext import db
 from google.appengine.ext.webapp.util import login_required
-
+from google.appengine.api import memcache
 
 from django.utils import simplejson as json
 
@@ -32,15 +32,7 @@ class MainHandler(webapp.RequestHandler):
     def get(self):
         user = users.get_current_user()
         
-        '''
-        if not user:
-            self.redirect(users.create_login_url(self.request.uri))
-            return
-        '''   
-                 
         template_params = {
-            'games': model.pagedBoards(0, 1000),
-            #'games': model.queryBoards(0, 100, query_filters, sort_options),
             'user' : user,
             'gameListingUrl': '/gameList',
             'imageUrl' : "" if user is None else model.userPicture(user.email()),
@@ -59,17 +51,22 @@ class CurrentBoardByGameHandler(webapp.RequestHandler):
     def get(self, gamekey):
         user = users.get_current_user()
         if not user:
+            self.response.headers.add_header("Content-Type", "application/json")
+            self.response.set_status(401)
             json.dump(dict(error="not signed in"), self.response.out)
             return
         
         s = application.get_live_game(gamekey)
-                
+        
+        self.response.headers.add_header("Content-Type", "application/json")        
         s.get_board().dump(self.response.out)
         
 class CurrentPlayerByGameHandler(webapp.RequestHandler):
     def get(self, gamekey):
         user = users.get_current_user()
         if not user:
+            self.response.headers.add_header("Content-Type", "application/json")
+            self.response.set_status(401)
             json.dump(dict(error="not signed in"), self.response.out)
             return
         
@@ -84,6 +81,7 @@ class CurrentPlayerByGameHandler(webapp.RequestHandler):
             json.dump(dict(error="player is not part of game"), self.response.out)
             return
         
+        self.response.headers.add_header("Content-Type", "application/json")
         json.dump(player, self.response.out, cls=model.CurrentPlayerEncoder)
         
         
@@ -93,6 +91,8 @@ class ActionHandler(webapp.RequestHandler):
         user = users.get_current_user()
         #TODO: handle error better-- should this be a get maybe?
         if not user:
+            self.response.headers.add_header("Content-Type", "application/json")
+            self.response.set_status(401)
             json.dump(dict(error="not signed in"), self.response.out)
             return
                 
@@ -108,6 +108,7 @@ class ActionHandler(webapp.RequestHandler):
         
         ret = s.processAction(action, data, user)
 
+        self.response.headers.add_header("Content-Type", "application/json")
         json.dump(ret, self.response.out)
 
 class NewGameHandler(webapp.RequestHandler):
@@ -171,7 +172,9 @@ class TestResourcesHandler(webapp.RequestHandler):
         s = application.get_live_game(gamekey)
         
         if s is None:
-            self.error(404)
+            self.response.headers.add_header("Content-Type", "application/json")
+            self.response.set_status(404)
+            json.dump({"error": "game key not found."}, self.response.out)
             return
         
         tok = s.registerUser(user)
@@ -187,6 +190,7 @@ class TestResourcesHandler(webapp.RequestHandler):
         else:
             logging.info("successful")
         
+        self.response.headers.add_header("Content-Type", "application/json");
         json.dump(player, self.response.out, cls=model.BoardEncoder)
 
 class GameListHandler(webapp.RequestHandler):
@@ -198,6 +202,8 @@ class GameListHandler(webapp.RequestHandler):
         #filter_re = re.compile(r"(P?<filt>\w+)(P?<op>\<|\>|\=|\<\=|\>\=|\!\=)(P?<arg>.+)")
         user = users.get_current_user()
         if not user:
+            self.response.headers.add_header("Content-Type", "application/json")
+            self.response.set_status(401);
             json.dump({"error": "user not logged in."}, self.response.out)
             return
         
@@ -252,23 +258,21 @@ class GameListHandler(webapp.RequestHandler):
                 else:
                     logging.info("unmatched argument: %s" % (f,))
                         
-        games = model.queryBoards(offset, limit, filters, sorts)
+        (count, games) = model.queryBoards(offset, limit, filters, sorts)
         
-        json.dump(games, self.response.out, cls=model.GameListEncoder)
+        self.response.headers.add_header("Content-Type", "application/json");
+        json.dump({"resultCount":count, "results":games}, self.response.out, cls=model.GameListEncoder)
 
 class Application(webapp.WSGIApplication):
-    live_games = dict()
     def get_live_game(self, gamekey):
-        s = self.live_games.get(gamekey, None)
+        s = memcache.get(gamekey)
         if s is None:
             s = state.get_game(gamekey)
-            if not s is None:
-                self.live_games[s.get_game_key()] = s
-                return s
-        else:
-            return s
-        
-        return None
+            if s is not None:
+                memcache.add(gamekey, s, 120)
+                
+        return s
+    
     def __init__(self):
         handlers = [
             (r"/", MainHandler),
