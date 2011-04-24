@@ -232,6 +232,7 @@ class GameState(object):
         r = self.board.getReservation(reservationKey)
         
         if r is None:
+            logging.info("No Reservation Found %s" % reservationKey)
             return None
         
         r.delete()
