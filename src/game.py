@@ -6,6 +6,9 @@ from google.appengine.api import channel
 from google.appengine.ext import db
 from google.appengine.ext.webapp.util import login_required
 from google.appengine.api import memcache
+from google.appengine.api import mail
+import email
+
 
 from django.utils import simplejson as json
 
@@ -56,7 +59,7 @@ class CurrentBoardByGameHandler(webapp.RequestHandler):
             json.dump(dict(error="not signed in"), self.response.out)
             return
         
-        s = application.get_live_game(gamekey)
+        s = get_live_game(gamekey)
         
         self.response.headers.add_header("Content-Type", "application/json")        
         s.get_board().dump(self.response.out)
@@ -70,7 +73,7 @@ class CurrentPlayerByGameHandler(webapp.RequestHandler):
             json.dump(dict(error="not signed in"), self.response.out)
             return
         
-        s = application.get_live_game(gamekey)
+        s = get_live_game(gamekey)
         
         if s is None:
             json.dump(dict(error="game is not live or does not exist"), self.response.out)
@@ -104,7 +107,7 @@ class ActionHandler(webapp.RequestHandler):
         except:
             pass
         
-        s = application.get_live_game(gamekey)        
+        s = get_live_game(gamekey)        
         
         ret = s.processAction(action, data, user)
 
@@ -125,16 +128,83 @@ class JoinHandler(webapp.RequestHandler):
     def get(self, gamekey):
         user = users.get_current_user()
         
-        s = application.get_live_game(gamekey)
+        s = get_live_game(gamekey)
         
         if s is None:
             self.error(404)
             return
         
-        color = s.joinUser(user)
-        self.redirect("/game/%s/" % (gamekey,))
+        reservationKey = self.request.get("key")
+        color = None
+        
+        logging.info("reservation key '%s'" % (reservationKey,))
+        
+        if reservationKey is None or len(reservationKey) == 0:
+            color = s.joinUser(user)
+            
+        else:
+            #having the key overrides the reservedFor setting in the database
+            color = s.joinByReservation(user, reservationKey)
+            
+        if color is not None:
+            self.redirect("/game/%s/" % (gamekey,))
+        else:
+            self.error(401)
+        
+class ReserveHandler(webapp.RequestHandler):
+    def post(self, gamekey):
+        user = users.get_current_user()
+        
+        self.response.headers.add_header("Content-Type", "application/json")
+        
+        s = get_live_game(gamekey)
+        
+        if s is None:
+            self.error(404)
+            return
+        
+        # you can only reserve a spot if you are the owner
+        if s.get_board().owner != user:
+            self.error(401)
+            return
+        
+        reservedForEmail = self.request.get("reservedFor")
+        logging.info("ReservedForEmail: %s" % reservedForEmail)
+        #TODO: make sure it's a valid email address
         
         
+        reservedFor = users.User(reservedForEmail)
+        
+        #TODO: put reservation time limit in configuration file
+        reservationKey = s.reserve(reservedFor, 20)
+        
+        logging.info("Reservation Processing: %s" % reservationKey)
+        
+        if reservationKey is None:
+            json.dump({"reserved":False}, self.response.out)
+        else:            
+            # send an email to them with the game key and reservation key
+            self.send_invitation(user, gamekey, reservedForEmail, reservationKey)
+            
+            json.dump({"reserved":True}, self.response.out)
+        
+
+    def send_invitation(self, user, gamekey, reservedForEmail, key):        
+        bodyPath = os.path.join(os.path.dirname(__file__), 'templates/reserve.txt')
+        htmlPath = os.path.join(os.path.dirname(__file__), 'templates/reserve.html')
+        
+        params = {
+            "domain":"pilgrimsofnatac.appspot.com",
+            "path":"/game/%s/join?key=%s" % (gamekey,key),
+        }
+        
+        mail.send_mail(sender=email.utils.formataddr((user.nickname(), user.email())),
+                       to=reservedForEmail,
+                       subject="Pilgrims of Natac Game Invitation",
+                       body=template.render(bodyPath, params),
+                       html=template.render(htmlPath, params))
+        
+
 class GameHandler(webapp.RequestHandler):
     @login_required
     def get(self, gamekey):
@@ -142,7 +212,7 @@ class GameHandler(webapp.RequestHandler):
         
         logging.info("gamekey %s" % (gamekey,))
         
-        s = application.get_live_game(gamekey)
+        s = get_live_game(gamekey)
         
         if s is None:
             #TODO: something more interesting here
@@ -158,7 +228,9 @@ class GameHandler(webapp.RequestHandler):
             'token' : tok,
             'gamekey' : gamekey,
             'nick': nick,
-            'imageUrl' : model.userPicture(user.email())
+            'imageUrl' : model.userPicture(user.email()),
+            'isOwner': (s.get_board().owner == user),
+            'reservationUrl':"reserve",
         }
 
         path = os.path.join(os.path.dirname(__file__), 'templates/game.xhtml')
@@ -169,7 +241,7 @@ class TestResourcesHandler(webapp.RequestHandler):
     def get(self, gamekey):
         user = users.get_current_user()
         
-        s = application.get_live_game(gamekey)
+        s = get_live_game(gamekey)
         
         if s is None:
             self.response.headers.add_header("Content-Type", "application/json")
@@ -263,16 +335,15 @@ class GameListHandler(webapp.RequestHandler):
         self.response.headers.add_header("Content-Type", "application/json");
         json.dump({"resultCount":count, "results":games}, self.response.out, cls=model.GameListEncoder)
 
+def get_live_game(gamekey):
+    s = memcache.get(gamekey)
+    if s is None:
+        s = state.get_game(gamekey)
+        if s is not None:
+            memcache.add(gamekey, s, 120)        
+    return s
+
 class Application(webapp.WSGIApplication):
-    def get_live_game(self, gamekey):
-        s = memcache.get(gamekey)
-        if s is None:
-            s = state.get_game(gamekey)
-            if s is not None:
-                memcache.add(gamekey, s, 120)
-                
-        return s
-    
     def __init__(self):
         handlers = [
             (r"/", MainHandler),
@@ -281,6 +352,7 @@ class Application(webapp.WSGIApplication):
             (r"/game/(.*)/action", ActionHandler),
             (r"/game/(.*)/join", JoinHandler),
             (r"/game/(.*)/currentPlayer", CurrentPlayerByGameHandler),
+            (r"/game/(.*)/reserve", ReserveHandler),
             (r"/gameList", GameListHandler),
             (r"/creategame", NewGameHandler),
             (r"/testModel", ModelTestHandler),
@@ -289,10 +361,8 @@ class Application(webapp.WSGIApplication):
         settings = dict(debug=True)
         webapp.WSGIApplication.__init__(self, handlers, **settings)
 
-application = Application()
-
 def main():
-    run_wsgi_app(application)
+    run_wsgi_app(Application())
 
 if __name__ == "__main__":
     main()

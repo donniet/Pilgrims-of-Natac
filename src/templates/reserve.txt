@@ -1,0 +1,5 @@
+
+You have been invited to a Pilgrims of Natac game!  Use the link below to accept the invitation.
+
+http://{{domain}}{{path}}
+
