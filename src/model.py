@@ -79,6 +79,19 @@ def queryBoards(offset, limit, filters, sorting):
 GamePhases = util.enum('GamePhases', 'join', 'buildFirst', 'buildSecond', 'main')
 TurnPhases = util.enum('TurnPhases', 'buildInitialSettlement', 'buildInitialRoad', 'playKnightCard', 'mainTurn')
 
+
+class TurnPhase(db.Model):
+    phase = db.StringProperty()
+    order = db.IntegerProperty()
+
+class GamePhase(db.Model):
+    phase = db.StringProperty()
+    order = db.IntegerProperty()
+    
+    def getTurnPhases(self):
+        return db.Query(TurnPhase).ancestor(self).order("order").fetch(100)
+
+
 class Board(db.Model):
     dateTimeCreated = db.DateTimeProperty()
     dateTimeStarted = db.DateTimeProperty()
@@ -88,11 +101,43 @@ class Board(db.Model):
     playerColors = db.StringListProperty()
     owner = db.UserProperty()
     gamePhase = db.IntegerProperty()
-    currentPlayer = db.IntegerProperty()
+    currentPlayerRef = db.IntegerProperty()
     turnPhase = db.IntegerProperty()
     playOrder = db.ListProperty(int)
     winner = db.UserProperty()
+    minimumPlayers = db.IntegerProperty()
     
+    def getGamePhases(self):
+        return db.Query(GamePhase).ancestor(self).order("order").fetch(100)
+    
+    def getGamePhase(self, order):
+        return db.Query(GamePhase).ancestor(self).filter("order =", order).get()
+    
+    def getGamePhaseByName(self, phase):
+        return db.Query(GamePhase).ancestor(self).filter("phase =", phase).get()
+    
+    def getCurrentGamePhase(self):
+        if self.gamePhase is None:
+            return None
+        else:
+            return self.getGamePhase(self.gamePhase)
+        
+    def getCurrentTurnPhase(self):
+        if self.turnPhase is None:
+            return None
+        
+        gp = self.getCurrentGamePhase()
+        if gp is None:
+            return None
+        
+        return db.Query(TurnPhase).ancestor(gp).filter("order =", self.turnPhase).get()
+        
+    def getCurrentPlayerColor(self):
+        if self.currentPlayerRef is None or self.playOrder is None or self.currentPlayerRef >= len(self.playOrder):
+            return None
+        else:
+            return self.playerColors[self.playOrder[self.currentPlayerRef]]
+        
     #TODO: add all deck of development cards
     def getVertexes(self):
         return db.Query(Vertex).ancestor(self).fetch(1000)
@@ -139,8 +184,9 @@ class Board(db.Model):
         return db.Query(Player).ancestor(self).fetch(1000)
     
     def dump(self, fp):
-        json.dump(self, fp, cls=BoardEncoder)
-        
+        json.dump(self, fp, cls=BoardEncoder)   
+ 
+
 class Reservation(db.Model):
     reservationKey = db.StringProperty()
     reservedFor = db.UserProperty()
@@ -345,13 +391,17 @@ class GameListEncoder(json.JSONEncoder):
                 gameKey = obj.gameKey,
                 players = db.Query(Player).ancestor(obj),
                 owner = obj.owner,
-                currentPlayer = obj.currentPlayer,
-                gamePhase = obj.gamePhase, #TODO: add gamephase enum
-                turnPhase = obj.turnPhase, #TODO: add turnphase enum
+                currentPlayer = None if not obj.currentPlayerRef else db.Query(Player).ancestor(obj).filter('color =', obj.playerColors[obj.turnOrder[obj.currentPlayerRef]]).get(),
+                gamePhase = obj.getCurrentGamePhase(),
+                turnPhase = obj.getCurrentTurnPhase(), #TODO: add turnphase enum
                 winner = obj.winner
 
                 #playOrder = db.ListProperty(int)
             )
+        elif isinstance(obj, GamePhase):
+            return obj.phase
+        elif isinstance(obj, TurnPhase):
+            return obj.phase
         elif isinstance(obj, Player):
             return dict(
                 color = obj.color,
@@ -381,13 +431,23 @@ class BoardEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Board):
             return dict(
+                dateTimeCreated = obj.dateTimeCreated,
                 dateTimeStarted = obj.dateTimeStarted,
                 gameKey = obj.gameKey,
                 players = db.Query(Player).ancestor(obj),
                 hexes = db.Query(Hex).ancestor(obj),
                 edges = db.Query(Edge).ancestor(obj),
-                vertex = db.Query(Vertex).ancestor(obj)
+                vertex = db.Query(Vertex).ancestor(obj),
+                resources = obj.resources,
+                owner = obj.owner,
+                gamePhase = obj.getCurrentGamePhase(),
+                turnPhase = obj.getCurrentTurnPhase(),
+                winner = obj.winner,
             )
+        elif isinstance(obj, GamePhase):
+            return obj.phase
+        elif isinstance(obj, TurnPhase):
+            return obj.phase
         elif isinstance(obj, Player):
             playerResources = db.Query(PlayerResources).ancestor(obj).fetch(1000)
             
@@ -402,6 +462,8 @@ class BoardEncoder(json.JSONEncoder):
                 #TODO: Serialize resources and development cards here
             )
         
+        elif isinstance(obj, users.User):
+            return dict(nickname=obj.nickname(), email=obj.email())
         elif isinstance(obj, Hex):
             return dict(
                 x = obj.x,

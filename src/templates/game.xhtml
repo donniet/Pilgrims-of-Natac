@@ -96,6 +96,8 @@ function loadBoard() {
             throw "Message not yet implemented";
         }
         
+        populateActions(message["availableActions"]);
+        
     }
     socket.onerror = function() {}
     socket.onclose = function() {
@@ -220,6 +222,46 @@ function reserve() {
 	});
 }
 
+function sendAction(action, data) {
+	var responder = new Object();
+	
+	jQuery.postJSON("/game/{{gamekey}}/action", {action:action, data:data}, function(ret) {
+        Event.fire(responder, "load", arguments);
+    });
+	
+	return responder;
+}
+
+function populateActions(availableActions) {
+	$("#actions").empty();
+	if(!availableActions) return;
+	
+	for(var i = 0; i < availableActions.length; i++) {
+		var a = availableActions[i];
+		
+		var act = $("<a href='javascript:void(0)'/>");
+		var li = $("<li/>");
+		
+		switch(a) {
+		case "startGame":
+			act.append("<span>Start Game</span>");
+			act.click(function() {
+				var responder = sendAction("startGame", null);
+				Event.addListener(responder, "load", function(data){
+					alert(data);
+				});
+			});
+			break;
+		case "quit":
+			act.append("<span>Quit</span>");
+			break;
+		}
+		
+		li.append(act)
+		$("#actions").append(li);
+	}
+}
+
 
 //]]></script>
 </head>
@@ -240,6 +282,9 @@ function reserve() {
     </div>
 
     <div id="game-board">
+
+<ul id="actions">
+</ul>
 
 <a href="javascript:void(0)" id="highlightVerts">Settlement</a>|
 <a href="javascript:void(0)" id="highlightEdges">Road</a>

@@ -54,14 +54,18 @@ class CurrentBoardByGameHandler(webapp.RequestHandler):
     def get(self, gamekey):
         user = users.get_current_user()
         if not user:
-            self.response.headers.add_header("Content-Type", "application/json")
+            #self.response.headers.add_header("Content-Type", "application/json")
             self.response.set_status(401)
             json.dump(dict(error="not signed in"), self.response.out)
             return
         
         s = get_live_game(gamekey)
         
-        self.response.headers.add_header("Content-Type", "application/json")        
+        s.sendMessageUser(user, {"chat": "Welcome!"})
+        
+        #self.response.headers.add_header("Content-Type", "application/json") 
+        #json.dump(ret, self.response.out, cls=model.BoardEncoder);
+               
         s.get_board().dump(self.response.out)
         
 class CurrentPlayerByGameHandler(webapp.RequestHandler):
@@ -274,7 +278,7 @@ class GameListHandler(webapp.RequestHandler):
         #filter_re = re.compile(r"(P?<filt>\w+)(P?<op>\<|\>|\=|\<\=|\>\=|\!\=)(P?<arg>.+)")
         user = users.get_current_user()
         if not user:
-            self.response.headers.add_header("Content-Type", "application/json")
+            #self.response.headers.add_header("Content-Type", "application/json")
             self.response.set_status(401);
             json.dump({"error": "user not logged in."}, self.response.out)
             return
@@ -332,7 +336,7 @@ class GameListHandler(webapp.RequestHandler):
                         
         (count, games) = model.queryBoards(offset, limit, filters, sorts)
         
-        self.response.headers.add_header("Content-Type", "application/json");
+        #self.response.headers.add_header("Content-Type", "application/json");
         json.dump({"resultCount":count, "results":games}, self.response.out, cls=model.GameListEncoder)
 
 def get_live_game(gamekey):

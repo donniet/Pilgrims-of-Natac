@@ -47,6 +47,15 @@ class BoardTemplate(object):
                 "desert"]
     resources = ["ore", "brick", "wool", "wheat", "wood"]
     colors = ["red", "blue", "green", "orange", "white", "brown"]
+    minimumPlayers = 2
+    
+    gamePhases = [
+        ("joining", []), 
+        ("buildFirstSettlement", ["buildSettlement", "buildRoad"]), 
+        ("buildSecondSettlement", ["buildSettlement", "buildRoad"]), 
+        ("main", ["rollDice", "moveRobber", "trade",  "playCard", "build"]), 
+        ("complete", [])
+    ]
     
     def __init__(self):
         
@@ -59,8 +68,20 @@ class BoardTemplate(object):
         board.resources = self.resources
         board.playerColors = self.colors
         board.owner = owner
+        board.gamePhase = 0
+        board.minimumPlayers = self.minimumPlayers;
+        
         board.put()
         
+        for i in range(len(self.gamePhases)):
+            gp_desc = self.gamePhases[i][0]
+            gp = model.GamePhase(parent=board, phase=gp_desc, order=i)
+            gp.put()
+            for j in range(len(self.gamePhases[i][1])):
+                tp_desc = self.gamePhases[i][1][j]
+                tp = model.TurnPhase(parent=gp, phase=tp_desc, order=j)
+                tp.put()
+                        
         j = 0
         for i in range(len(self.boardTemplate["hexes"])):
             h = self.boardTemplate["hexes"][i]
@@ -277,9 +298,34 @@ class GameState(object):
         self.board.addPlayer(color, user)
         return color
     def sendMessageAll(self, message):
+        c = self.board.getCurrentPlayerColor()
+                
+        gp = self.board.getCurrentGamePhase()
+        tp = self.board.getCurrentTurnPhase()
+        
         for user in self.users:
-            channel.send_message(self.gamekey + user.user_id(), json.dumps(message))
+            p = self.board.getPlayer(user)
+            
+            mu = message.copy()
+            mu["availableActions"] = self.getUserActionsInner(user, p, c, gp, tp)
+
+            channel.send_message(self.gamekey + user.user_id(), json.dumps(mu))
+            
+    def sendMessageUser(self, user, message):
+        c = self.board.getCurrentPlayerColor()
+                
+        gp = self.board.getCurrentGamePhase()
+        tp = self.board.getCurrentTurnPhase()
+        p = self.board.getPlayer(user)
+        
+        mu = message.copy()
+        mu["availableActions"] = self.getUserActionsInner(user, p, c, None if gp is None else gp.phase, None if tp is None else tp.phase)
+        
+        channel.send_message(self.gamekey + user.user_id(), json.dumps(mu))
+        
+            
     def processAction(self, action, data, user):
+        logging.info("processAction: %s" % action)
         if action == "reset":
             return self.resetBoardAction()
         if action == "placeSettlement":
@@ -288,7 +334,75 @@ class GameState(object):
             return self.placeCity(data["x"], data["y"], user)
         if action == "placeRoad":
             return self.placeRoad(user, data["x1"], data["y1"], data["x2"], data["y2"])
+        if action == "startGame":
+            return self.startGame(user)
         return False
+    
+    def getUserActionsInner(self, user, player, currentColor, gamePhase, turnPhase):
+        actions = ["quit"]
+        logging.info("useractions params: %s %s %s %s" % (gamePhase, turnPhase, user.email, currentColor))
+        if gamePhase == "joining" and user == self.board.owner:
+            actions.append("startGame")
+        elif gamePhase == "buildFirstSettlement" and player.color == currentColor:
+            if turnPhase == "buildSettlement":
+                actions.append("placeSettlement")
+            elif turnPhase == "buildRoad":
+                actions.append("placeRoad")
+        elif gamePhase == "buildSecondSettlement" and player.color == currentColor:
+            if turnPhase == "buildSettlement":
+                actions.append("placeSettlement")
+            elif turnPhase == "buildRoad":
+                actions.append("placeRoad")
+        elif gamePhase == "main" and player.color == currentColor:
+            if turnPhase == "rollDice":
+                actions.append("rollDice")
+            elif turnPhase == "moveRobber":
+                actions.append("placeRobber")
+            elif turnPhase == "trade" or turnPhase == "playCard" or turnPhase == "build":
+                actions.extend(["startTrade", "playCard", "placeSettlement", "placeCity", "placeRoad"])
+        elif gamePhase == "complete":
+            pass
+        return actions
+    
+    def getUserActions(self, user):
+        
+        p = self.board.getPlayer(user)
+        c = self.board.getCurrentPlayerColor()
+                
+        gp = self.board.getCurrentGamePhase()
+        tp = self.board.getCurrentTurnPhase()
+        
+        return self.getUserActionsInner(user, p, c, gp, tp)    
+    
+    def startGame(self, user):
+        if user != self.board.owner:
+            logging.info("startGame: Not Owner")
+            return False
+        gp = self.board.getCurrentGamePhase()
+        if gp is None or gp.phase != "joining":
+            logging.info("startGame: Not joining Phase")
+            return False
+        
+        np = len(self.board.getPlayers())
+        if np < self.board.minimumPlayers:
+            logging.info("startGame: Not Enough Players")
+            return False
+        
+        bfs = self.board.getGamePhaseByName("buildFirstSettlement")
+        if bfs is None:
+            logging.info("startGame: no buildFirstSettlement gamephase")
+            return False
+        
+        po = range(np)
+        random.shuffle(po)
+        
+        self.board.dateTimeStarted = datetime.datetime.now()
+        self.board.gamePhase = bfs.order
+        self.board.playOrder = po
+        self.board.currentPlayerRef = 0 #current player is 
+        self.board.put()
+        return True
+    
     def get_game_key(self):
         return self.gamekey
     def resetBoardAction(self):
