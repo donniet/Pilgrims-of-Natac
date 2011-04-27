@@ -270,6 +270,10 @@ class GameState(object):
     
     
     def joinUser(self, user, byReservation=False):
+        if self.board.dateTimeStarted is not None:
+            #cannot join after the game has started
+            return False
+        
         #all joined users must be registered
         self.registerUser(user)
         
@@ -374,17 +378,17 @@ class GameState(object):
         logging.info("useractions params: %s, %s, %s, %s, %s" % (gamePhase, turnPhase, user.email(), currentColor, None if player is None else player.color))
         if gamePhase == "joining" and user == self.board.owner:
             actions.append("startGame")
-        elif gamePhase == "buildFirstSettlement" and player.color == currentColor:
+        elif gamePhase == "buildFirstSettlement" and player is not None and player.color == currentColor:
             if turnPhase == "buildSettlement":
                 actions.append("placeSettlement")
             elif turnPhase == "buildRoad":
                 actions.append("placeRoad")
-        elif gamePhase == "buildSecondSettlement" and player.color == currentColor:
+        elif gamePhase == "buildSecondSettlement" and player is not None and player.color == currentColor:
             if turnPhase == "buildSettlement":
                 actions.append("placeSettlement")
             elif turnPhase == "buildRoad":
                 actions.append("placeRoad")
-        elif gamePhase == "main" and player.color == currentColor:
+        elif gamePhase == "main" and player is not None and player.color == currentColor:
             if turnPhase == "rollDice":
                 actions.append("rollDice")
             elif turnPhase == "moveRobber":
