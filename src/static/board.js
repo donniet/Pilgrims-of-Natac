@@ -37,7 +37,6 @@ function Board(options) {
     this.hex_ = new Array();
     this.edge_ = new Array();
     this.vertex_ = new Array();
-    this.listeners_ = new Object();
 }
 Board.prototype.loadJSON = function(obj) {
     this.hex_ = new Array();
@@ -141,33 +140,6 @@ Board.prototype.placeRoad = function(x1, y1, x2, y2, color) {
     }
 	return false;
 }
-Board.prototype.addListener = function (event, listener) {
-    if (typeof this.listeners_[event] == "undefined") {
-        this.listeners_[event] = new Array();
-    }
-
-    this.listeners_[event].push(listener);
-}
-Board.prototype.removeListener = function (event, listener) {
-    if (this.listeners_[event]) {
-        for (var i = 0; i < this.listeners_[event].length; i++) {
-            if (listener === this.listeners_[event][i]) {
-                this.listeners_[event][i] = null;
-                delete this.listeners_[event][i];
-            }
-        }
-    }
-}
-Board.prototype.fire = function (event, args) {
-    if (this.listeners_[event]) {
-        for (var i = 0; i < this.listeners_[event].length; i++) {
-            var listener = this.listeners_[event][i];
-            if (typeof listener == "function") {
-                listener.apply(listener, args);
-            }
-        }
-    }
-}
 
 /* transform grid coords to pixel coords */
 Board.prototype.c = function (/* int */nx, /* int */ny) {
@@ -268,9 +240,9 @@ Board.prototype.renderVertexHitArea = function (vertex, svgEl) {
     c.setAttribute("class", "vertex");
 
     var self = this;
-    c.onclick = function () { self.fire("vertexclick", [vertex]); };
-    c.onmouseover = function () { self.fire("vertexover", [vertex]); };
-    c.onmouseout = function () { self.fire("vertexout", [vertex]); };
+    c.onclick = function () { Event.fire(self, "vertexclick", [vertex]); };
+    c.onmouseover = function () { Event.fire(self, "vertexover", [vertex]); };
+    c.onmouseout = function () { Event.fire(self, "vertexout", [vertex]); };
 
     svgEl.appendChild(c);
 }
@@ -360,9 +332,9 @@ Board.prototype.renderEdgeHitArea = function (edge, svgEl) {
     svgEl.appendChild(p);
 
     var self = this;
-    p.onclick = function () { self.fire("edgeclick", [edge]); };
-    p.onmouseover = function () { self.fire("edgeover", [edge]); };
-    p.onmouseout = function () { self.fire("edgeout", [edge]); };
+    p.onclick = function () { Event.fire(self, "edgeclick", [edge]); };
+    p.onmouseover = function () { Event.fire(self, "edgeover", [edge]); };
+    p.onmouseout = function () { Event.fire(self, "edgeout", [edge]); };
 }
 Board.prototype.renderHex = function (hex, svgEl) {
     var g = hex.svgEl_;
@@ -386,9 +358,9 @@ Board.prototype.renderHex = function (hex, svgEl) {
     g.appendChild(p);
 
     var self = this;
-    p.onclick = function () { self.fire("hexclick", [hex]); };
-    p.onmouseover = function () { self.fire("hexover", [hex]); };
-    p.onmouseout = function () { self.fire("hexout", [hex]); };
+    p.onclick = function () { Event.fire(self, "hexclick", [hex]); };
+    p.onmouseover = function () { Event.fire(self, "hexover", [hex]); };
+    p.onmouseout = function () { Event.fire(self, "hexout", [hex]); };
 
 
     var txt = svgEl.ownerDocument.createElementNS(this.svgns_, "text");
@@ -398,9 +370,9 @@ Board.prototype.renderHex = function (hex, svgEl) {
     txt.setAttribute("style", "font-family:Verdana;font-size:24px;stroke:" + color + ";fill:" + color + ";");
     txt.setAttribute("x", (pp[0].x + pp[1].x) / 2 - 10);
     txt.setAttribute("y", (pp[0].y + pp[4].y) / 2 + 10);
-    txt.onclick = function () { self.fire("hexclick", [hex]); };
-    txt.onmouseover = function () { self.fire("hexover", [hex]); };
-    txt.onmouseout = function () { self.fire("hexout", [hex]); };
+    txt.onclick = function () { Event.fire(self, "hexclick", [hex]); };
+    txt.onmouseover = function () { Event.fire(self, "hexover", [hex]); };
+    txt.onmouseout = function () { Event.fire(self, "hexout", [hex]); };
 
     g.appendChild(txt);
 }

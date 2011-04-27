@@ -340,12 +340,19 @@ class GameListHandler(webapp.RequestHandler):
         json.dump({"resultCount":count, "results":games}, self.response.out, cls=model.GameListEncoder)
 
 def get_live_game(gamekey):
+    #disable caching...
+    return state.get_game(gamekey)
+    '''
     s = memcache.get(gamekey)
     if s is None:
+        logging.info("game '%s' not cached." % gamekey)
         s = state.get_game(gamekey)
         if s is not None:
-            memcache.add(gamekey, s, 120)        
+            memcache.add(gamekey, s, 120)
+    else:
+        logging.info("game '%s' cached." % gamekey)
     return s
+    '''
 
 class Application(webapp.WSGIApplication):
     def __init__(self):

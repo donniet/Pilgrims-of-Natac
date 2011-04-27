@@ -7,7 +7,7 @@
       xmlns:xlink="http://www.w3.org/1999/xlink"> 
 <head>
 <link type="text/css" rel="stylesheet" href="/static/game.css"></link>
-<link type="text/css" rel="stylesheet" href="/static/Reset.css" />
+<link type="text/css" rel="stylesheet" href="/static/reset.css" />
 <link type="text/css" rel="stylesheet" href="/static/picture.css" />
 <!-- <script type="text/javascript" src="/static/json.js"></script> -->
 <!-- <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js" type="text/javascript"></script> -->
@@ -68,13 +68,13 @@ function loadBoard() {
             getBoard(board);
             break;
         case "placeSettlement":
-            board.placeSettlement(message["x"], message["y"], message["color"]);
+            board.placeSettlement(message["data"]["x"], message["data"]["y"], message["color"]);
             break;
         case "placeCity":
-            board.placeCity(message["x"], message["y"], message["color"]);
+            board.placeCity(message["data"]["x"], message["data"]["y"], message["color"]);
             break;
         case "placeRoad":
-            board.placeRoad(message["x1"], message["y1"], message["x2"], message["y2"], message["color"]);
+            board.placeRoad(message["data"]["x1"], message["data"]["y1"], message["data"]["x2"], message["data"]["y2"], message["color"]);
             break;
         case "playerJoinGame":
             throw "Message not yet implemented";
@@ -96,7 +96,7 @@ function loadBoard() {
             throw "Message not yet implemented";
         }
         
-        populateActions(message["availableActions"]);
+        populateActions(message["availableActions"], board);
         
     }
     socket.onerror = function() {}
@@ -105,6 +105,7 @@ function loadBoard() {
         console.log("disconnected.");
     };
 
+    /*
 	var highlightVerts = document.getElementById("highlightVerts");
 
 	toggleHighlight = true;
@@ -124,9 +125,11 @@ function loadBoard() {
 
 		toggleHighlightEdges = !toggleHighlightEdges;
 	};
+	*/
 
-    board.addListener("hexclick", function(hex) { alert("hexclick: " + hex.hexType_); });
-    board.addListener("vertexclick", function(vertex) {
+    Event.addListener(board, "hexclick", function(hex) { alert("hexclick: " + hex.hexType_); });
+	/*
+	Event.addListener(board, "vertexclick", function(vertex) {
         var action = "placeSettlement";
         console.log("vertex.vertexDevelopments_.length: " +vertex.vertexDevelopments_.length)
         if(vertex.vertexDevelopments_.length > 0 && vertex.vertexDevelopments_[0].model == "settlement") action = "placeCity";
@@ -137,8 +140,7 @@ function loadBoard() {
             //alert(ret);
         });
     });
-    
-    board.addListener("edgeclick", function(edge) {
+	Event.addListener(board, "edgeclick", function(edge) {
         var action = "placeRoad";
         
         if(edge.edgeDevelopments_.length == 0) {
@@ -147,27 +149,10 @@ function loadBoard() {
             });
         }
     });
-    /*
-    board.addListener("edgeclick", function(edge) {
-        if(edge.edgeDevelopments_.length == 0) {
-            edge.addDevelopment({
-                model: "road",
-                player: "player-red"
-            });
-        }
-        else if(edge.edgeDevelopments_[0].player == "player-red"){
-            edge.removeDevelopment(0);
-            edge.addDevelopment({
-                model: "road",
-                player: "player-blue"
-            });
-        }
-        else {
-            edge.removeDevelopment(0);
-        }
-    });
-    */
+	*/
     
+    
+    return board;
 }
 
 function joingame() {
@@ -184,24 +169,6 @@ function handleLoad() {
     	playerView1.render(document.getElementById("player1"));
     });
 	
-/*
-	player1.score_ = 7;
-	player1.name_ = "Donnie";
-	player1.image_ = "";
-	player1.resourceCount_ = 4;
-	player1.bonusCount_ = 2;
-	player1.color_ = "#FF0000";
-	player1.colorName_ = "Red";
-	player1.active_ = false;
-	player1.isLocal_ = true;
-	//player1.resources_ = [{resourceName_: "Ore"}, {resourceName_: "Ore"}, {resourceName_: "Grain"}, {resourceName_: "Wood"}];
-	player1.resources_ = [{"amount": 1, "resource": "ore"}, {"amount": 3, "resource": "wheat"}, {"amount": 0, "resource": "wood"}, {"amount": 0, "resource": "brick"}, {"amount": 0, "resource": "sheep"}];
-	player1.bonuses_ = [{bonusName_: "Monopoly"}, {bonusName_: "Soldier"}];
-
-
-    var playerView1 = new PlayerView(player1);
-    playerView1.render(document.getElementById("player1"));
-*/
     loadBoard()  
     
     
@@ -232,7 +199,63 @@ function sendAction(action, data) {
 	return responder;
 }
 
-function populateActions(availableActions) {
+function beginBuildSettlement(board) {
+	board.highlightBuildableVertex("player-{{color}}");
+	$("#disableAction").show();
+	$("#actions").hide();
+	
+	handleVertexClickId = Event.addListener(board, "vertexclick", function(vertex) {
+		console.log("vertex click");
+		var responder = sendAction("placeSettlement", "{\"x\":"+vertex.position_.x+",\"y\":"+vertex.position_.y+"}");
+		Event.addListener(responder, "load", function(ret) {
+			if(!ret) alert("You cannot place a settlement there.");
+			
+			Event.removeListenerById(board, "vertexclick", handleVertexClickId);
+		});
+		board.clearHighlights();
+		$("#disableAction").hide();
+		$("#actions").show();
+	});
+		
+	$("#disableAction a").bind("click", function() {
+		Event.removeListenerById(board, "vertexclick", handleVertexClickId);
+		board.clearHighlights();
+		$("#disableAction").hide();
+		$("#actions").show();
+		$("#disableAction a").unbind("click");
+	});
+}
+
+
+function beginBuildRoad(board) {
+	board.highlightBuildableEdge("player-{{color}}");
+	$("#disableAction").show();
+	$("#actions").hide();
+	
+	clickId = Event.addListener(board, "edgeclick", function(edge) {
+		console.log("edge click");
+		var responder = sendAction("placeRoad", '{"x1":'+edge.first_.x+',"y1":'+edge.first_.y+',"x2":'+edge.second_.x+',"y2":'+edge.second_.y+"}");
+		Event.addListener(responder, "load", function(ret) {
+			if(!ret) alert("You cannot place a road there.");
+			
+			Event.removeListenerById(board, "edgeclick", clickId);
+		});
+		board.clearHighlights();
+		$("#disableAction").hide();
+		$("#actions").show();
+	});
+		
+	$("#disableAction a").bind("click", function() {
+		Event.removeListenerById(board, "edgeclick", clickId);
+		board.clearHighlights();
+		$("#disableAction").hide();
+		$("#actions").show();
+		$("#disableAction a").unbind("click");
+	});
+	
+}
+
+function populateActions(availableActions, board) {
 	$("#actions").empty();
 	if(!availableActions) return;
 	
@@ -252,9 +275,25 @@ function populateActions(availableActions) {
 				});
 			});
 			break;
+		case "placeSettlement":
+			act.append("<span>Build Settlement</span>");
+			act.click(function() { beginBuildSettlement(board); });
+			break;
+		case "placeRoad":
+			act.append("<span>Build Road</span>");
+			act.click(function() { beginBuildRoad(board); });
+			break;
 		case "quit":
 			act.append("<span>Quit</span>");
 			break;
+		default:
+			act.append("<span>"+a+"</span>")
+			act.click(function() {
+				var responder = sendAction(a, null);
+				Event.addListener(responder, "load", function(data){
+					alert(data);
+				});
+			});
 		}
 		
 		li.append(act)
@@ -285,9 +324,9 @@ function populateActions(availableActions) {
 
 <ul id="actions">
 </ul>
-
-<a href="javascript:void(0)" id="highlightVerts">Settlement</a>|
-<a href="javascript:void(0)" id="highlightEdges">Road</a>
+<ul id="disableAction">
+	<li><a href="javascript:void(0)">Cancel</a></li>
+</ul>
 
 
 <!--

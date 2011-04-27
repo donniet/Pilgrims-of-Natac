@@ -90,6 +90,9 @@ class GamePhase(db.Model):
     
     def getTurnPhases(self):
         return db.Query(TurnPhase).ancestor(self).order("order").fetch(100)
+    
+    def getTurnPhaseByName(self, phase):
+        return db.Query(TurnPhase).ancestor(self).filter("phase =", phase).get()
 
 
 class Board(db.Model):
@@ -106,6 +109,10 @@ class Board(db.Model):
     playOrder = db.ListProperty(int)
     winner = db.UserProperty()
     minimumPlayers = db.IntegerProperty()
+    
+    def save(self, callback):
+        rpc = db.create_rpc(deadline=5, callback=callback)
+        self.put(rpc)
     
     def getGamePhases(self):
         return db.Query(GamePhase).ancestor(self).order("order").fetch(100)
@@ -133,10 +140,18 @@ class Board(db.Model):
         return db.Query(TurnPhase).ancestor(gp).filter("order =", self.turnPhase).get()
         
     def getCurrentPlayerColor(self):
+        p = self.getCurrentPlayer()
+        if p is None: 
+            return None
+        
+        return p.color
+    
+    def getCurrentPlayer(self):
         if self.currentPlayerRef is None or self.playOrder is None or self.currentPlayerRef >= len(self.playOrder):
             return None
         else:
-            return self.playerColors[self.playOrder[self.currentPlayerRef]]
+            p = self.getPlayers()
+            return p[self.currentPlayerRef]
         
     #TODO: add all deck of development cards
     def getVertexes(self):
@@ -391,7 +406,8 @@ class GameListEncoder(json.JSONEncoder):
                 gameKey = obj.gameKey,
                 players = db.Query(Player).ancestor(obj),
                 owner = obj.owner,
-                currentPlayer = None if not obj.currentPlayerRef else db.Query(Player).ancestor(obj).filter('color =', obj.playerColors[obj.turnOrder[obj.currentPlayerRef]]).get(),
+                currentPlayer = obj.getCurrentPlayer(),
+                currentPlayerColor = obj.getCurrentPlayerColor(),
                 gamePhase = obj.getCurrentGamePhase(),
                 turnPhase = obj.getCurrentTurnPhase(), #TODO: add turnphase enum
                 winner = obj.winner
@@ -443,6 +459,9 @@ class BoardEncoder(json.JSONEncoder):
                 gamePhase = obj.getCurrentGamePhase(),
                 turnPhase = obj.getCurrentTurnPhase(),
                 winner = obj.winner,
+                currentPlayer = obj.getCurrentPlayer(),
+                currentPlayerColor = obj.getCurrentPlayerColor(),
+                
             )
         elif isinstance(obj, GamePhase):
             return obj.phase

@@ -6,6 +6,8 @@ import model
 import datetime
 from google.appengine.api import channel
 import string
+from google.appengine.ext import db
+from google.appengine.api import memcache
 
 from events import EventHook
 
@@ -186,6 +188,7 @@ class GameState(object):
     gamekey = None
     users = []
     valid = False
+    stateKey = None
     
     #events
     onPlaceSettlement = EventHook()
@@ -197,6 +200,12 @@ class GameState(object):
         self.gamekey = gamekey
         self.board = model.findBoard(self.gamekey)
         self.valid = (not self.board is None)
+        
+    def updateStateKey(self):
+        self.stateKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(16))
+        
+    def getStateKey(self):
+        return self.stateKey
     
     def isvalid(self):
         return self.valid
@@ -296,6 +305,8 @@ class GameState(object):
         color = cols.pop()
             
         self.board.addPlayer(color, user)
+        self.updateStateKey()
+        
         return color
     def sendMessageAll(self, message):
         c = self.board.getCurrentPlayerColor()
@@ -307,7 +318,7 @@ class GameState(object):
             p = self.board.getPlayer(user)
             
             mu = message.copy()
-            mu["availableActions"] = self.getUserActionsInner(user, p, c, gp, tp)
+            mu["availableActions"] = self.getUserActionsInner(user, p, c, None if gp is None else gp.phase, None if tp is None else tp.phase)
 
             channel.send_message(self.gamekey + user.user_id(), json.dumps(mu))
             
@@ -320,27 +331,47 @@ class GameState(object):
         
         mu = message.copy()
         mu["availableActions"] = self.getUserActionsInner(user, p, c, None if gp is None else gp.phase, None if tp is None else tp.phase)
+        mu["stateKey"] = self.getStateKey()
         
         channel.send_message(self.gamekey + user.user_id(), json.dumps(mu))
         
             
     def processAction(self, action, data, user):
-        logging.info("processAction: %s" % action)
+        # before processing any action, check if we are processing one now:
+        p = memcache.get("%s-processing-action" % self.board.gameKey)
+        if not p is None and p:
+            return False #processing
+        
+        memcache.set("%s-processing-action" % self.board.gameKey, True, 60)
+        ret = False
+        
         if action == "reset":
-            return self.resetBoardAction()
-        if action == "placeSettlement":
-            return self.placeSettlement(data["x"], data["y"], user)
-        if action == "placeCity":
-            return self.placeCity(data["x"], data["y"], user)
-        if action == "placeRoad":
-            return self.placeRoad(user, data["x1"], data["y1"], data["x2"], data["y2"])
-        if action == "startGame":
-            return self.startGame(user)
-        return False
+            ret = self.resetBoardAction()
+        elif action == "placeSettlement":
+            ret = self.placeSettlement(data["x"], data["y"], user)
+        elif action == "placeCity":
+            ret = self.placeCity(data["x"], data["y"], user)
+        elif action == "placeRoad":
+            ret = self.placeRoad(user, data["x1"], data["y1"], data["x2"], data["y2"])
+        elif action == "startGame":
+            ret = self.startGame(user)
+        
+        if ret:
+            dataitems = []
+            if data is not None and data.items() is not None:
+                dataitems = data.items()
+        
+            self.updateStateKey()
+            color = self.board.getPlayer(user).color
+            self.sendMessageAll({"action":action, "color":color,"data":data})        
+        
+        memcache.delete("%s-processing-action" % self.board.gameKey)
+        
+        return ret
     
     def getUserActionsInner(self, user, player, currentColor, gamePhase, turnPhase):
         actions = ["quit"]
-        logging.info("useractions params: %s %s %s %s" % (gamePhase, turnPhase, user.email, currentColor))
+        logging.info("useractions params: %s, %s, %s, %s, %s" % (gamePhase, turnPhase, user.email(), currentColor, None if player is None else player.color))
         if gamePhase == "joining" and user == self.board.owner:
             actions.append("startGame")
         elif gamePhase == "buildFirstSettlement" and player.color == currentColor:
@@ -396,29 +427,31 @@ class GameState(object):
         po = range(np)
         random.shuffle(po)
         
+        logging.info("bfs.order: %d" % bfs.order)
+        
         self.board.dateTimeStarted = datetime.datetime.now()
         self.board.gamePhase = bfs.order
+        if len(bfs.getTurnPhases()) > 0:
+            self.board.turnPhase = 0
+        else:
+            self.board.turnPhase = None
+            
         self.board.playOrder = po
         self.board.currentPlayerRef = 0 #current player is 
         self.board.put()
+        
+        self.sendMessageAll({"action":"chat", "data":"Game Started"})
+        
         return True
     
     def get_game_key(self):
         return self.gamekey
-    def resetBoardAction(self):
-        del self.board
-        bt = BoardTemplate()        
-        self.gamekey = "A"
-        self.board = bt.instantiateModel(self.gameKey)
-        self.onReset.fire()
-        return True
+
     def get_board(self):
         return self.board
     def get_players(self):
         return self.board.getPlayers()
     def placeRoad(self, user, x1, y1, x2, y2):
-        #TODO: does the player have enough resources to buy a road?
-        #TODO: does the player have any roads left? 
         p = self.board.getPlayer(user)
         if p is None:
             logging.info("player not found %s." % (user,))
@@ -463,18 +496,68 @@ class GameState(object):
                 break;
         
         if not adjecentVertDev and not adjecentEdgeDev:
+            logging.info("no adjecent placements")
+            return False
+        
+        np = len(self.board.getPlayers())
+        gp = self.board.getCurrentGamePhase()
+        tp = self.board.getCurrentTurnPhase()
+        if gp is None or tp is None:
+            return False
+        
+        #update the game/turn phase
+        if gp.phase == "buildFirstSettlement":
+            if tp.phase != "buildRoad":
+                logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
+                return False
+            
+            if self.board.currentPlayerRef < np - 1:
+                self.board.currentPlayerRef += 1
+                self.board.turnPhase = 0
+            else:
+                self.board.gamePhase += 1
+                self.board.turnPhase = 0
+                
+            self.board.put()
+        elif gp.phase == "buildSecondSettlement":
+            if tp.phase != "buildRoad":
+                logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
+                return False
+            
+            logging.info("currentPlayerRef: %d" % self.board.currentPlayerRef)
+            
+            if self.board.currentPlayerRef > 0:
+                self.board.currentPlayerRef -= 1
+                self.board.turnPhase = 0
+            else:
+                self.board.gamePhase += 1
+                self.board.turnPhase = 0
+                self.board.currentPlayerRef += 1
+                
+            self.board.put()
+        elif gp.phase == "main":
+            if tp.phase != "build":
+                logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
+                return False
+            else:   
+                #TODO: does the player have enough resources to buy a road?
+                #TODO: does the player have any roads left?    
+                pass
+        else:
+            logging.info("not in the correct phase (currentPhase: %s)" % gp.phase)
             return False
         
         e.addDevelopment(color, "road")
-        self.sendMessageAll({'action': 'placeRoad', 'x1':x1, 'y1':y1, 'x2':x2, 'y2':y2, 'color':color})
         return True
-            
+    
+    def createSendMessageAllCallback(self, message):
+        def x():
+            self.sendMessageAll(message)
+        return x
+    
     def placeSettlement(self, x, y, user):
         #logging.info("placeSettlement: " + data)
-        #TODO: does this vertex have a road of the right color running into it?
-        #TODO: does the player have enough resources to buy a settlement?
-        #TODO: does the player have any settlements left? 
-        #TODO: are we in the placement phase of the game?
+
         
         p = self.board.getPlayer(user)
         if p is None: 
@@ -501,17 +584,49 @@ class GameState(object):
             devs = a.getDevelopments()
             for d in devs:
                 if d.type == "settlement" or d.type == "city":
-                    adjecentDev = True
+                    adjecentDev = True 
                     break;
             if adjecentDev: 
                 break;
         
         if adjecentDev:
+            logging.info("too close to other developments")
             return False
+        
+        gp = self.board.getCurrentGamePhase()
+        tp = self.board.getCurrentTurnPhase()
+        if gp is None or tp is None:
+            return False
+        
+        #update the game/turn phase
+        if gp.phase == "buildFirstSettlement" or gp.phase == "buildSecondSettlement":
+            if tp.phase == "buildSettlement":
+                rtp = gp.getTurnPhaseByName("buildRoad")
                 
-        v.addDevelopment(color, "settlement")
-        self.sendMessageAll({'action': 'placeSettlement', 'x':x, 'y':y, 'color':color})
-        return True
+                self.board.turnPhase += 1
+                self.board.put()
+                v.addDevelopment(color, "settlement")
+                
+                #self.sendMessageAll({'action': 'placeSettlement', 'x':x, 'y':y, 'color':color})
+                
+                return True
+            else:
+                logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
+                return False
+        elif gp.phase == "main":
+            if tp.phase != "build":
+                logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
+                return False
+            else:
+                #TODO: does this vertex have a road of the right color running into it?
+                #TODO: does the player have enough resources to buy a settlement?
+                #TODO: does the player have any settlements left?
+                pass
+        else:
+            return False 
+                
+        #self.sendMessageAll({'action': 'placeSettlement', 'x':x, 'y':y, 'color':color})
+        return False
     def placeCity(self, x, y, user):
         #logging.info("placeSettlement: " + data)
         #TODO: does the player have enough resources to buy a city?
@@ -537,7 +652,6 @@ class GameState(object):
             if d.type == "settlement" and d.color == color:
                 d.type = "city"
                 d.put()
-                self.sendMessageAll({'action': 'placeCity', 'x':x, 'y':y, 'color':color})
                 return True
             
         return False

@@ -47,3 +47,8 @@ indexes:
   ancestor: yes
   properties:
   - name: expirationDateTime
+
+- kind: TurnPhase
+  ancestor: yes
+  properties:
+  - name: order

@@ -23,14 +23,19 @@ $(document).ready(function() {
 	var lastsunday = sunday.addDays(-7);
 	
 	var gl = new GameListing("{{user.email}}", "{{gameListingUrl}}");
-	gl.setLimit(5);
+	gl.setLimit(10);
 	
 	var createdCol = new Column(function(row) { return Date.parseISO(row.data.dateTimeCreated); }).setHeading("Created").setSortable(true).setSortField("dateTimeCreated").setDisplayBinding(function(row) { return row.data.dateTimeCreated ? Date.parseISO(row.data.dateTimeCreated).format() : 'ongoing'; });
 	createdCol.setGroups([lastsunday, sunday, yesterday, today]).setGroupNames(["More Than Two Weeks Ago", "Last Week", "This Week", "Yesterday", "Today"]);
 	
+	var startedCol = new Column(function(row) { return Date.parseISO(row.data.dateTimeStarted); }).setHeading("Started").setSortable(true).setSortField("dateTimeStarted").setDisplayBinding(function(row) { return row.data.dateTimeStarted ? Date.parseISO(row.data.dateTimeStarted).format() : 'ongoing'; });
+	startedCol.setGroups([lastsunday, sunday, yesterday, today]).setGroupNames(["More Than Two Weeks Ago", "Last Week", "This Week", "Yesterday", "Today"]);
+	
+	
 	//gl.addColumn(new Column("this.data.gameKey").setHeading("Game Key").setSortable(true).setSortField("gameKey"));
 	gl.addColumn(new PlayerColumn(function(row) { return row.data.owner; }, "/player?email={email}").setHeading("Owner").setSortable(true).setSortField("owner"));
 	gl.addColumn(createdCol);
+	//gl.addColumn(startedCol);
 	//gl.addColumn(new Column("this.data.dateTimeEnded").setHeading("Ended").setSortable(true).setSortField("dateTimeEnded").setDisplayBinding("this.data.dateTimeEnded ? Date.parseISO(this.data.dateTimeEnded).format() : 'ongoing'"));
 	gl.addColumn(new PlayerListColumn(function(row) { return row.data.players; }).setHeading("Players"));
 	gl.addColumn(new PlayerColumn(function(row) { return row.data.winner; }).setHeading("Winner").setSortable(true).setSortField("winner"));
