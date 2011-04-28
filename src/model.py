@@ -101,6 +101,7 @@ class Board(db.Model):
     dateTimeEnded = db.DateTimeProperty()
     gameKey = db.StringProperty()
     resources = db.StringListProperty()
+    hexProduces = db.StringListProperty() # must be same dimension as resources
     playerColors = db.StringListProperty()
     owner = db.UserProperty()
     gamePhase = db.IntegerProperty()
@@ -109,6 +110,7 @@ class Board(db.Model):
     playOrder = db.ListProperty(int)
     winner = db.UserProperty()
     minimumPlayers = db.IntegerProperty()
+    resourceMap = None
     
     def save(self, callback):
         rpc = db.create_rpc(deadline=5, callback=callback)
@@ -128,6 +130,14 @@ class Board(db.Model):
             return None
         else:
             return self.getGamePhase(self.gamePhase)
+        
+    def getResourceByHexType(self, hexType):
+        if self.resourceMap is None:
+            self.resourceMap = dict()
+            for i in range(len(self.hexProduces)):
+                #TODO: error check this
+                self.resourceMap[self.hexProduces[i]] = self.resources[i]
+        return self.resourceMap.get(hexType, None)
         
     def getCurrentTurnPhase(self):
         if self.turnPhase is None:
@@ -289,7 +299,10 @@ def userPicture(email):
 class PlayerResources(db.Model):
     resource = db.StringProperty()
     amount = db.IntegerProperty()
-    
+
+def get_hex_coords(x,y):
+    return [(x+1,y),(x+3,y),(x+4,y+1),(x+3,y+2),(x+1,y+2),(x,y+1)]
+
 class Hex(db.Model):
     x = db.IntegerProperty()
     y = db.IntegerProperty()
@@ -303,6 +316,15 @@ class Hex(db.Model):
         d = Development(parent=self, color=color, type=type)
         d.put()
         return d  
+    
+    def getAdjecentVertexes(self):
+        ret = []
+        hexCoords = get_hex_coords(self.x, self.y)
+        for p in hexCoords:
+            v = db.Query(Vertex).ancestor(self.parent()).filter("x =", p[0]).filter("y =",p[1]).get()
+            if v: ret.append(v)
+        return ret
+            
 
 class Edge(db.Model):
     #ASSERT x1 < x2 or (x1 == x2 and y1 <= y2)
@@ -370,6 +392,16 @@ class Vertex(db.Model):
                
         
         return adj
+    
+    # this can work almost exactly liike Hex::getAdjecentVertexes
+    def getAdjecentHexes(self):
+        ret = []
+        hexCoords = get_hex_coords(self.x-3, self.y-2)
+        for p in hexCoords:
+            h = db.Query(Hex).ancestor(self.parent()).filter("x =", p[0]).filter("y =",p[1]).get()
+            if h: ret.append(h)
+        return ret
+        
 
 class Development(db.Model):
     color = db.StringProperty()

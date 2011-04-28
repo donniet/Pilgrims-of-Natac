@@ -48,6 +48,7 @@ class BoardTemplate(object):
                 "forest", "forest", "forest", "forest",
                 "desert"]
     resources = ["ore", "brick", "wool", "wheat", "wood"]
+    hexProduces = ["mountains", "hills", "pasture", "fields", "forest"]
     colors = ["red", "blue", "green", "orange", "white", "brown"]
     minimumPlayers = 2
     
@@ -68,6 +69,7 @@ class BoardTemplate(object):
         board.gameKey = gameKey
         board.dateTimeCreated = datetime.datetime.now()
         board.resources = self.resources
+        board.hexProduces = self.hexProduces
         board.playerColors = self.colors
         board.owner = owner
         board.gamePhase = 0
@@ -611,6 +613,16 @@ class GameState(object):
                 self.board.put()
                 v.addDevelopment(color, "settlement")
                 
+                if gp.phase == "buildSecondSettlement":
+                    res = dict()
+                    adj_hexes = v.getAdjecentHexes()
+                    for ah in adj_hexes:
+                        r = self.board.getResourceByHexType(ah.type)
+                        if res.get(r, None):
+                            res[r] = 1
+                        else:
+                            res[r] += 1
+                    p.adjustResources(res)
                 #self.sendMessageAll({'action': 'placeSettlement', 'x':x, 'y':y, 'color':color})
                 
                 return True
