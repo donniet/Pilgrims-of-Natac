@@ -59,6 +59,12 @@ class BoardTemplate(object):
         ("main", ["rollDice", "moveRobber", "trade",  "playCard", "build"]), 
         ("complete", [])
     ]
+    developments = [
+        {"location":"vertex", "name":"settlement", "playerStart":5, "cost":{"brick":1, "wool":1, "wheat":1, "wood":1}},
+        {"location":"vertex", "name":"city", "playerStart":4, "cost":{"ore":3, "wheat":2}},
+        {"location":"edge", "name":"road", "playerStart":15, "cost":{"brick":1, "wood":1}},
+    ]
+    dice = [6,6]
     
     def __init__(self):
         
@@ -73,9 +79,17 @@ class BoardTemplate(object):
         board.playerColors = self.colors
         board.owner = owner
         board.gamePhase = 0
-        board.minimumPlayers = self.minimumPlayers;
+        board.minimumPlayers = self.minimumPlayers
+        board.dice = self.dice
         
         board.put()
+        
+        for d in self.developments:
+            dt = model.DevelopmentType(parent=board, location=d["location"], name=d["name"], playerStart=d["playerStart"])
+            dt.put()
+            for (r, a) in d["cost"].items():
+                dtc = model.DevelopmentTypeCost(parent=dt, resource=r, amount=a)
+                dtc.put()
         
         for i in range(len(self.gamePhases)):
             gp_desc = self.gamePhases[i][0]
@@ -272,10 +286,13 @@ class GameState(object):
     
     
     def joinUser(self, user, byReservation=False):
+        # before processing any action, check if we are processing one now:
+        
         if self.board.dateTimeStarted is not None:
             #cannot join after the game has started
-            return False
-        
+            return None
+            
+       
         #all joined users must be registered
         self.registerUser(user)
         
@@ -283,7 +300,14 @@ class GameState(object):
         
         if p:
             return p.color
-                
+        
+        
+        p = memcache.get("%s-processing-join" % self.board.gameKey)
+        if not p is None and p:
+            return False #processing
+        
+        memcache.set("%s-processing-join" % self.board.gameKey, True, 60)
+        
         cols = set(self.board.playerColors)
         players = self.board.getPlayers()
         reservationCount = self.board.getReservationCount()
@@ -298,20 +322,24 @@ class GameState(object):
         if byReservation:
             reservationCount = 0
         
-        if len(players) + reservationCount >= len(cols):
-            return None
+        color = None
         
-        for p in players:
-            if p.user == user:
-                #HACK: this is ugly
-                return p.color
-            else:
-                cols.remove(p.color)
-        
-        color = cols.pop()
+        if len(players) + reservationCount < len(cols):
+            for p in players:
+                if p.user == user:
+                    #HACK: this is ugly
+                    color = p.color
+                    break
+                else:
+                    cols.remove(p.color)
             
-        self.board.addPlayer(color, user)
-        self.updateStateKey()
+            if color is None:
+                color = cols.pop()
+            
+            self.board.addPlayer(color, user)
+            self.updateStateKey()
+                
+        memcache.delete("%s-processing-join" % self.board.gameKey)
         
         return color
     def sendMessageAll(self, message):
@@ -351,6 +379,8 @@ class GameState(object):
         memcache.set("%s-processing-action" % self.board.gameKey, True, 60)
         ret = False
         
+        logging.info("processing action: %s %s %s" % (action, data, user))
+        
         if action == "reset":
             ret = self.resetBoardAction()
         elif action == "placeSettlement":
@@ -361,8 +391,14 @@ class GameState(object):
             ret = self.placeRoad(user, data["x1"], data["y1"], data["x2"], data["y2"])
         elif action == "startGame":
             ret = self.startGame(user)
+        elif action == "rollDice":
+            ret = self.rollDice(user)
+        elif action == "endTurn":
+            ret = self.endTurn(user)
         
         if ret:
+            
+            logging.info("processing action [True]: %s %s %s" % (action, data, user))
             dataitems = []
             if data is not None and data.items() is not None:
                 dataitems = data.items()
@@ -374,6 +410,12 @@ class GameState(object):
         memcache.delete("%s-processing-action" % self.board.gameKey)
         
         return ret
+    
+    def endTurn(self, user):
+        self.board.moveNextPlayer()
+        self.board.turnPhase = 0
+        self.board.put()
+        return True
     
     def getUserActionsInner(self, user, player, currentColor, gamePhase, turnPhase):
         actions = ["quit"]
@@ -396,7 +438,7 @@ class GameState(object):
             elif turnPhase == "moveRobber":
                 actions.append("placeRobber")
             elif turnPhase == "trade" or turnPhase == "playCard" or turnPhase == "build":
-                actions.extend(["startTrade", "playCard", "placeSettlement", "placeCity", "placeRoad"])
+                actions.extend(["startTrade", "playCard", "placeSettlement", "placeCity", "placeRoad","endTurn"])
         elif gamePhase == "complete":
             pass
         return actions
@@ -412,6 +454,7 @@ class GameState(object):
         return self.getUserActionsInner(user, p, c, gp, tp)    
     
     def startGame(self, user):
+        logging.info("starting game...")
         if user != self.board.owner:
             logging.info("startGame: Not Owner")
             return False
@@ -420,7 +463,9 @@ class GameState(object):
             logging.info("startGame: Not joining Phase")
             return False
         
-        np = len(self.board.getPlayers())
+        players = self.board.getPlayers()
+        
+        np = len(players)
         if np < self.board.minimumPlayers:
             logging.info("startGame: Not Enough Players")
             return False
@@ -435,6 +480,10 @@ class GameState(object):
         
         logging.info("bfs.order: %d" % bfs.order)
         
+        for i in range(len(po)):
+            players[i].order = po[i]
+            players[i].put()
+        
         self.board.dateTimeStarted = datetime.datetime.now()
         self.board.gamePhase = bfs.order
         if len(bfs.getTurnPhases()) > 0:
@@ -446,9 +495,75 @@ class GameState(object):
         self.board.currentPlayerRef = 0 #current player is 
         self.board.put()
         
+        for p in players:
+            p.resetResources()
+        
         self.sendMessageAll({"action":"chat", "data":"Game Started"})
         
         return True
+    
+    def rollDice(self, user):
+        p = self.board.getPlayer(user)
+        if p is None: 
+            logging.info("player not found %s." % user)
+            return False
+        
+        color = p.color
+        
+        if self.board.getCurrentPlayerColor() != color:
+            logging.info("not player turn %s." % user)
+            return False
+        
+        tp = self.board.getCurrentTurnPhase()
+        
+        if tp.phase != "rollDice":
+            return False
+        
+        diceValues = []
+        sum = 0
+        for m in self.board.dice:
+            d = random.randint(1, m)
+            sum += d
+            diceValues.append(d)
+            logging.info("die: %d" % d)
+        
+        if sum == 0:
+            #TODO handle error
+            pass
+        elif sum == 7:
+            #TODO: handle roll of 7
+            tp = self.board.getCurrentGamePhase().getTurnPhaseByName("build")
+            
+            self.board.turnPhase = tp.order
+        else:
+            pc = self.board.getPlayerColorMap()
+                    
+            # distribute resources
+            hx = self.board.getHexesByValue(sum)
+            for h in hx:
+                resource = self.board.getResourceByHexType(h.type)
+                vx = h.getAdjecentVertexes()
+                for v in vx:
+                    dx = v.getDevelopments()
+                    for d in dx:
+                        p = pc[d.color]
+                        if p is None:
+                            logging.info("player not found: %s" % d.color)
+                            pass
+                        elif d.type == "settlement":
+                            p.adjustResources(dict([[resource, 1]]))
+                        elif d.type == "city":
+                            p.adjustResources(dict([[resource, 2]]))
+            
+            tp = self.board.getCurrentGamePhase().getTurnPhaseByName("build")
+            
+            self.board.turnPhase = tp.order
+            
+        self.board.diceValues = diceValues
+        self.board.put()
+        
+        return True  
+        
     
     def get_game_key(self):
         return self.gamekey
@@ -464,6 +579,10 @@ class GameState(object):
             return False
         
         color = p.color
+        
+        if self.board.getCurrentPlayerColor() != color:
+            logging.info("not player turn %s." % user)
+            return False
         
         e = self.board.getEdge(x1, y1, x2, y2)
         if e is None:
@@ -518,13 +637,16 @@ class GameState(object):
                 return False
             
             if self.board.currentPlayerRef < np - 1:
-                self.board.currentPlayerRef += 1
+                self.board.moveNextPlayer()
+                #self.board.currentPlayerRef += 1
                 self.board.turnPhase = 0
             else:
                 self.board.gamePhase += 1
                 self.board.turnPhase = 0
                 
             self.board.put()
+            e.addDevelopment(color, "road")
+            return True
         elif gp.phase == "buildSecondSettlement":
             if tp.phase != "buildRoad":
                 logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
@@ -533,28 +655,41 @@ class GameState(object):
             logging.info("currentPlayerRef: %d" % self.board.currentPlayerRef)
             
             if self.board.currentPlayerRef > 0:
-                self.board.currentPlayerRef -= 1
+                self.board.movePrevPlayer()
+                #self.board.currentPlayerRef -= 1
                 self.board.turnPhase = 0
             else:
                 self.board.gamePhase += 1
                 self.board.turnPhase = 0
-                self.board.currentPlayerRef += 1
+                self.board.moveNextPlayer()
+                #self.board.currentPlayerRef += 1
                 
             self.board.put()
+            e.addDevelopment(color, "road")
+            return True
         elif gp.phase == "main":
             if tp.phase != "build":
                 logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
                 return False
-            else:   
-                #TODO: does the player have enough resources to buy a road?
+            else:
+                cost = self.board.getDevelopmentTypeCost("road")
+                for r in cost:
+                    cost[r] = -cost[r]
+                    
+                if not p.adjustResources(cost):
+                    logging.info("not enough resources to build road.")
+                    return False
+                
+                
+                e.addDevelopment(color, "road")
+                return True
+                
                 #TODO: does the player have any roads left?    
-                pass
         else:
             logging.info("not in the correct phase (currentPhase: %s)" % gp.phase)
             return False
         
-        e.addDevelopment(color, "road")
-        return True
+        return False
     
     def createSendMessageAllCallback(self, message):
         def x():
@@ -616,12 +751,17 @@ class GameState(object):
                 if gp.phase == "buildSecondSettlement":
                     res = dict()
                     adj_hexes = v.getAdjecentHexes()
+                    logging.info("adjecent hexes: %d" % len(adj_hexes))
                     for ah in adj_hexes:
                         r = self.board.getResourceByHexType(ah.type)
-                        if res.get(r, None):
+                        if r is None:
+                            pass
+                        elif res.get(r, None) is None:
                             res[r] = 1
                         else:
                             res[r] += 1
+                            
+                        logging.info("resource type: %s, %s = %d" % (ah.type, r, res[r]))
                     p.adjustResources(res)
                 #self.sendMessageAll({'action': 'placeSettlement', 'x':x, 'y':y, 'color':color})
                 
@@ -634,10 +774,32 @@ class GameState(object):
                 logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
                 return False
             else:
-                #TODO: does this vertex have a road of the right color running into it?
-                #TODO: does the player have enough resources to buy a settlement?
+                adj_edge = v.getAdjecentEdges()
+                has_adj_road = False
+                for e in adj_edge:
+                    devs = e.getDevelopments()
+                    for d in devs:
+                        if d.type == "road" and d.color == p.color:
+                            has_adj_road = True
+                            break
+                    if has_adj_road:
+                        break
+                
+                if not has_adj_road:
+                    logging.info("No adjecent roads to place settlement")
+                    return False
+                                
+                cost = self.board.getDevelopmentTypeCost("settlement")
+                for r in cost:
+                    cost[r] = -cost[r]
+                    
+                if not p.adjustResources(cost):
+                    logging.info("Not enough resources to place settlement")
+                    return False
                 #TODO: does the player have any settlements left?
-                pass
+                
+                v.addDevelopment(color, "settlement")
+                return True
         else:
             return False 
                 
@@ -666,6 +828,13 @@ class GameState(object):
         
         for d in devs:
             if d.type == "settlement" and d.color == color:
+                cost = self.board.getDevelopmentTypeCost("city")
+                for r in cost:
+                    cost[r] = -cost[r]
+                    
+                if not p.adjustResources(cost):
+                    return False
+                
                 d.type = "city"
                 d.put()
                 return True

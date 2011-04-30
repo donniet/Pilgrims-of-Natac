@@ -42,7 +42,7 @@ function getBoard(board) {
     });
 }
 
-function loadBoard() {
+function loadBoard(player1) {
     
     var channel = new goog.appengine.Channel('{{ token}}');
     var socket = channel.open();
@@ -97,6 +97,8 @@ function loadBoard() {
         }
         
         populateActions(message["availableActions"], board);
+        //TODO: only update player when needed or when asked
+        updatePlayer(player1);
         
     }
     socket.onerror = function() {}
@@ -126,30 +128,6 @@ function loadBoard() {
 		toggleHighlightEdges = !toggleHighlightEdges;
 	};
 	*/
-
-    Event.addListener(board, "hexclick", function(hex) { alert("hexclick: " + hex.hexType_); });
-	/*
-	Event.addListener(board, "vertexclick", function(vertex) {
-        var action = "placeSettlement";
-        console.log("vertex.vertexDevelopments_.length: " +vertex.vertexDevelopments_.length)
-        if(vertex.vertexDevelopments_.length > 0 && vertex.vertexDevelopments_[0].model == "settlement") action = "placeCity";
-        
-        console.log("action: " + action);
-                                                                
-        jQuery.postJSON("/game/{{gamekey}}/action", {action:action, data:"{\"x\":"+vertex.position_.x+",\"y\":"+vertex.position_.y+"}"}, function(ret){
-            //alert(ret);
-        });
-    });
-	Event.addListener(board, "edgeclick", function(edge) {
-        var action = "placeRoad";
-        
-        if(edge.edgeDevelopments_.length == 0) {
-            jQuery.postJSON("/game/{{gamekey}}/action", {action:action, data:'{"x1":'+edge.first_.x+',"y1":'+edge.first_.y+',"x2":'+edge.second_.x+',"y2":'+edge.second_.y+"}"}, function(ret) {
-                //alert(ret)
-            });
-        }
-    });
-	*/
     
     
     return board;
@@ -161,22 +139,23 @@ function joingame() {
 
 function handleLoad() {
 	var player1 = new Player();
-	jQuery.getJSON("/game/{{gamekey}}/currentPlayer", function(data) {
-		if(! data || data["error"]) return;
-        player1.loadJSON(data);
-		player1.isLocal_ = true;
-		var playerView1 = new PlayerView(player1);
-    	playerView1.render(document.getElementById("player1"));
-    });
-	
-    loadBoard()  
+	var playerView1 = new PlayerView(player1);
+	updatePlayer(player1);
+    loadBoard(player1);  
     
     
 }
 
-function updatePlayer() {
-    player1.score_ = Math.floor(Math.random() * 9 + 1);
-    player1.loadPlayer();
+function updatePlayer(player1) {
+	jQuery.getJSON("/game/{{gamekey}}/currentPlayer", function(data) {
+		if(! data || data["error"]) { alert("no data!"); return };
+        player1.loadJSON(data);
+		player1.isLocal_ = true;
+		
+		
+    	//playerView1.render(document.getElementById("player1"));
+    	//playerView1.renderResources();
+    });
 }
 
 function reserve() {
@@ -226,6 +205,47 @@ function beginBuildSettlement(board) {
 	});
 }
 
+
+function beginBuildCity(board) {
+	$("#disableAction").show();
+	$("#actions").hide();
+	
+	handleVertexClickId = Event.addListener(board, "vertexclick", function(vertex) {
+		console.log("vertex click");
+		var responder = sendAction("placeCity", "{\"x\":"+vertex.position_.x+",\"y\":"+vertex.position_.y+"}");
+		Event.addListener(responder, "load", function(ret) {
+			if(!ret) alert("You cannot place a city there.");
+			
+			Event.removeListenerById(board, "vertexclick", handleVertexClickId);
+		});
+		$("#disableAction").hide();
+		$("#actions").show();
+	});
+		
+	$("#disableAction a").bind("click", function() {
+		Event.removeListenerById(board, "vertexclick", handleVertexClickId);
+		board.clearHighlights();
+		$("#disableAction").hide();
+		$("#actions").show();
+		$("#disableAction a").unbind("click");
+	});
+}
+
+function beginRollDice(board) {
+	var responder = sendAction("rollDice", "null");
+	Event.addListener(responder, "load", function(ret) {
+		if(!ret) { alert("Dice roll error!  You Fail!"); }
+		else { alert("Rolled Dice!"); }
+	});
+}
+
+function beginEndTurn(board) {
+	var responder = sendAction("endTurn", "null");
+	Event.addListener(responder, "load", function(ret) {
+		if(!ret) { alert("Error, could not end turn.");}
+		else {}
+	});
+}
 
 function beginBuildRoad(board) {
 	board.highlightBuildableEdge("player-{{color}}");
@@ -282,6 +302,18 @@ function populateActions(availableActions, board) {
 		case "placeRoad":
 			act.append("<span>Build Road</span>");
 			act.click(function() { beginBuildRoad(board); });
+			break;
+		case "placeCity":
+			act.append("<span>Build City</span>");
+			act.click(function() { beginBuildCity(board); });
+			break;
+		case "rollDice":
+			act.append("<span>Roll Dice</span>");
+			act.click(function() { beginRollDice(board); });
+			break;
+		case "endTurn":
+			act.append("<span>End Turn</span>");
+			act.click(function() { beginEndTurn(board); });
 			break;
 		case "quit":
 			act.append("<span>Quit</span>");

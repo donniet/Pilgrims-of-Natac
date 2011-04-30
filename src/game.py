@@ -88,7 +88,7 @@ class CurrentPlayerByGameHandler(webapp.RequestHandler):
             json.dump(dict(error="player is not part of game"), self.response.out)
             return
         
-        self.response.headers.add_header("Content-Type", "application/json")
+        #self.response.headers.add_header("Content-Type", "application/json")
         json.dump(player, self.response.out, cls=model.CurrentPlayerEncoder)
         
         

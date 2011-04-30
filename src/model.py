@@ -103,6 +103,8 @@ class Board(db.Model):
     resources = db.StringListProperty()
     hexProduces = db.StringListProperty() # must be same dimension as resources
     playerColors = db.StringListProperty()
+    dice = db.ListProperty(int)
+    diceValues = db.ListProperty(int)
     owner = db.UserProperty()
     gamePhase = db.IntegerProperty()
     currentPlayerRef = db.IntegerProperty()
@@ -156,12 +158,25 @@ class Board(db.Model):
         
         return p.color
     
+    def moveNextPlayer(self):
+        players = self.getPlayers()
+        self.currentPlayerRef += 1
+        if self.currentPlayerRef >= len(players):
+            self.currentPlayerRef = self.currentPlayerRef % len(players)
+        self.put()
+    
+    def movePrevPlayer(self):
+        players = self.getPlayers()
+        self.currentPlayerRef -= 1
+        if self.currentPlayerRef < 0:
+            self.currentPlayerRef = self.currentPlayerRef % len(players)
+        self.put()
+    
     def getCurrentPlayer(self):
-        if self.currentPlayerRef is None or self.playOrder is None or self.currentPlayerRef >= len(self.playOrder):
+        if self.currentPlayerRef is None:
             return None
         else:
-            p = self.getPlayers()
-            return p[self.currentPlayerRef]
+            return db.Query(Player).ancestor(self).filter("order =", self.currentPlayerRef).get()
         
     #TODO: add all deck of development cards
     def getVertexes(self):
@@ -170,6 +185,9 @@ class Board(db.Model):
         return db.Query(Edge).ancestor(self).fetch(1000)
     def getHexes(self):
         return db.Query(Hex).ancestor(self).fetch(1000)
+    
+    def getHexesByValue(self, value):
+        return db.Query(Hex).ancestor(self).filter("value =", value).fetch(1000)
     
     def getVertex(self, x, y):
         return db.Query(Vertex).ancestor(self).filter('x =', x).filter('y =', y).get()
@@ -208,6 +226,35 @@ class Board(db.Model):
     def getPlayers(self):
         return db.Query(Player).ancestor(self).fetch(1000)
     
+    def getPlayerColorMap(self):
+        ret = dict()
+        players = self.getPlayers()
+        for p in players:
+            ret[p.color] = p
+        return ret
+    
+    def getDevelopmentTypeCost(self, name):
+        ret = dict()
+        dt = db.Query(DevelopmentType).ancestor(self).filter("name =", name).get()
+        if dt is None:
+            return ret
+        
+        return dt.getCost()    
+    
+    def getDevelopmentTypeMapByLocation(self, location):
+        ret = dict()
+        devTypes = db.Query(DevelopmentType).ancestor(self).filter("location =", location).fetch(100)
+        for dt in devTypes:
+            ret[dt.name] = dt
+            cost = db.Query(DevelopmentTypeCost).ancestor(dt).fetch(100)
+            ret["cost"] = dict()
+            for c in cost:
+                ret["cost"][c.resource] = c.amount
+        
+        return ret
+        
+    
+    
     def dump(self, fp):
         json.dump(self, fp, cls=BoardEncoder)   
  
@@ -221,11 +268,25 @@ class DevelopmentType(db.Model):
     name = db.StringProperty()
     location = db.StringProperty(choices=set(["hex","edge","vertex"]))
     playerStart = db.IntegerProperty()
+    
+    def getCost(self):
+        ret = dict()
+        
+        cost = db.Query(DevelopmentTypeCost).ancestor(self).fetch(100)
+        for c in cost:
+            ret[c.resource] = c.amount
+        
+        return ret
+
+class DevelopmentTypeCost(db.Model):
+    resource = db.StringProperty()
+    amount = db.IntegerProperty()
 
 class Player(db.Model):
     color = db.StringProperty()
     user = db.UserProperty()
     score = db.IntegerProperty(default=0)
+    order = db.IntegerProperty()
     
     # send a dict of resources, integer mappings to add to players resources
     # negative integers subtract resources
@@ -262,7 +323,10 @@ class Player(db.Model):
     def adjustResources(self, resource_dict, validate_only=False):
         ret = db.run_in_transaction(self.__adjustResourcesTrans, resource_dict, validate_only)
         
-        return (ret is None) or ret
+        if ret is None:
+            return False
+        else:
+            return ret
     
     def __adjustResourcesTrans(self, resource_dict, validate_only):
         rd = resource_dict.copy()
@@ -285,6 +349,7 @@ class Player(db.Model):
             if a < 0:
                 raise db.Rollback()
             elif not validate_only:
+                logging.info("adjusting %s = %d:" % (r, a))
                 pr = PlayerResources(parent=self, resource=r, amount=a)
                 pr.put()
                 
@@ -396,8 +461,9 @@ class Vertex(db.Model):
     # this can work almost exactly liike Hex::getAdjecentVertexes
     def getAdjecentHexes(self):
         ret = []
-        hexCoords = get_hex_coords(self.x-3, self.y-2)
+        hexCoords = get_hex_coords(self.x-4, self.y-2)
         for p in hexCoords:
+            logging.info("looking for hex: %d, %d" % (p[0], p[1]))
             h = db.Query(Hex).ancestor(self.parent()).filter("x =", p[0]).filter("y =",p[1]).get()
             if h: ret.append(h)
         return ret
@@ -493,7 +559,16 @@ class BoardEncoder(json.JSONEncoder):
                 winner = obj.winner,
                 currentPlayer = obj.getCurrentPlayer(),
                 currentPlayerColor = obj.getCurrentPlayerColor(),
-                
+                diceValues = obj.diceValues,
+                dice = obj.dice,
+                developmentTypes=db.Query(DevelopmentType).ancestor(obj),
+            )
+        elif isinstance(obj, DevelopmentType):
+            return dict(
+                name = obj.name,
+                location = obj.location,
+                playerStart = obj.playerStart,
+                cost = obj.getCost()
             )
         elif isinstance(obj, GamePhase):
             return obj.phase
@@ -509,7 +584,8 @@ class BoardEncoder(json.JSONEncoder):
                 #playerResources = db.Query(PlayerResources).ancestor(obj),
                 totalResources = len(playerResources),
                 userpicture = userPicture(obj.user.email()),
-                score = obj.score
+                score = obj.score,
+                order = obj.order
                 #TODO: Serialize resources and development cards here
             )
         

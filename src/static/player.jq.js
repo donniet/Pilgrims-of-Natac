@@ -35,7 +35,7 @@ Player.prototype.loadJSON = function (json) {
 	this.color_ = typeof Player.nameToColorMap[this.colorName_] != "undefined" ? Player.nameToColorMap[this.colorName_] : this.colorName_;
 	this.name_ = json["user"]["nickname"];
 	this.image_ = json["userpicture"];
-
+	this.resources_ = new Array();
 	for(var i = 0; json["playerResources"] && i < json["playerResources"].length; i++) {
 		var r = json["playerResources"][i];
 		this.resources_.push({
@@ -67,6 +67,8 @@ function PlayerView(player) {
 
     this.resourcesEl_ = null;
     this.bonusesEl_ = null;
+    
+    Event.addListener(this.player_, "playerload", this.handleUpdate, this);
 }
 PlayerView.prototype.handleUpdate = function () {
     if (this.imageEl_) this.imageEl_.src = this.player_.image_;
@@ -80,6 +82,7 @@ PlayerView.prototype.handleUpdate = function () {
     if (this.el_) {
         this.el_.className = "player " + this.player_.colorName_ + " " + (this.player_.active_ ? "active" : "inactive");
     }
+    this.renderResources();
 }
 PlayerView.prototype.render = function (el) {
     var doc = el.ownerDocument;
@@ -167,9 +170,9 @@ PlayerView.prototype.render = function (el) {
         this.el_.appendChild(this.bonusesEl_);
     }
 
-    Event.addListener(this.player_, "playerload", this.handleUpdate, this);
 }
 PlayerView.prototype.renderResources = function () {
+	console.log("rendering resources...");
     var _p = this;
 
     var _find = function(resourceType) {
@@ -181,7 +184,7 @@ PlayerView.prototype.renderResources = function () {
     $("#pp-res-wood").html( _find("wood").amount );
     $("#pp-res-rock").html( _find("ore").amount );
     $("#pp-res-clay").html( _find("brick").amount );
-    
+    /*
     $('[id^="pp-res-card"]').click( function() {
         var ar_k = this.id.split("-");
         var k = ar_k[ar_k.length-1];
@@ -190,12 +193,14 @@ PlayerView.prototype.renderResources = function () {
         alert("clicked " + res.resource);
         Event.fire(this, "resourceclick", [res, this.player_]);
     });
+    */
 }
 
 PlayerView.prototype.findResource = function(resourceType) {
 	console.log("looking for " + resourceType);
     for (var i = 0; i < this.player_.resources_.length; i++) {
         if( this.player_.resources_[i].resource == resourceType ){
+        	console.log("found " + resourceType + " = " + this.player_.resources_[i].amount);
             return this.player_.resources_[i];
         }
     }
