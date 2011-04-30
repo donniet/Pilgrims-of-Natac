@@ -8,6 +8,7 @@ from google.appengine.ext.webapp.util import login_required
 from google.appengine.api import memcache
 from google.appengine.api import mail
 import email
+from xml.sax.saxutils import escape
 
 
 from django.utils import simplejson as json
@@ -65,7 +66,8 @@ class CurrentBoardByGameHandler(webapp.RequestHandler):
         
         #self.response.headers.add_header("Content-Type", "application/json") 
         #json.dump(ret, self.response.out, cls=model.BoardEncoder);
-               
+        
+        #
         s.get_board().dump(self.response.out)
         
 class CurrentPlayerByGameHandler(webapp.RequestHandler):
@@ -232,11 +234,13 @@ class GameHandler(webapp.RequestHandler):
             'token' : tok,
             'gamekey' : gamekey,
             'nick': nick,
-            'imageUrl' : model.userPicture(user.email()),
+            'imageUrl' : escape(model.userPicture(user.email())),
             'isOwner': (s.get_board().owner == user),
             'reservationUrl':"reserve",
         }
-
+        
+        self.response.headers.add_header("Content-Type", "application/xhtml+xml")
+        
         path = os.path.join(os.path.dirname(__file__), 'templates/game.xhtml')
         self.response.out.write(template.render(path, template_params))
 
