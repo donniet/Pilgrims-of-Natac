@@ -44,17 +44,25 @@ var Event = {
             delete obj.__listeners[event][listenerId];
         }
     },
+    removeAllListeners: function(obj, event) {
+    	if(obj && obj.__listeners) {
+    		if(typeof event == "undefined") {
+    			obj.__listeners = new Object();
+    		}
+    		else if(typeof obj.__listeners[event] != "undefined") {
+    			obj.__listeners[event] = new Array();
+    		}
+    	}
+    },
     fire: function (obj, event, args) {
-        if (obj && obj.__listeners && obj.__listeners[event]) {
-            for (var i = 0; i < obj.__listeners[event].length; i++) {
-                var f = obj.__listeners[event][i];
-                if (typeof f == "function") {
-                    // TODO: should the scope be the obj, the listener, or should it be passed in?
-                    f.apply(obj, args);
-                }
-                else if (f && typeof f.listener == "function") {
-                    f.listener.apply(f.scope, args);
-                }
+        for (var i = 0; obj && obj.__listeners && obj.__listeners[event] && i < obj.__listeners[event].length; i++) {
+            var f = obj.__listeners[event][i];
+            if (typeof f == "function") {
+                // TODO: should the scope be the obj, the listener, or should it be passed in?
+                f.apply(obj, args);
+            }
+            else if (f && typeof f.listener == "function") {
+                f.listener.apply(f.scope, args);
             }
         }
     }

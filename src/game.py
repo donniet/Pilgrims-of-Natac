@@ -237,6 +237,10 @@ class GameHandler(webapp.RequestHandler):
             'imageUrl' : escape(model.userPicture(user.email())),
             'isOwner': (s.get_board().owner == user),
             'reservationUrl':"reserve",
+            'boardUrl':"currentBoard",
+            'actionUrl':"action",
+            'playerUrl':"currentPlayer",
+            'joinUrl':"join",
         }
         
         self.response.headers.add_header("Content-Type", "application/xhtml+xml")

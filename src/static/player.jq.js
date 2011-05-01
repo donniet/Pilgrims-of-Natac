@@ -20,18 +20,19 @@ function Player() {
 
 
 Player.nameToColorMap = {
-	"blue": "#0000FF",
-	"red": "#FF0000",
-	"green": "#00FF00",
-	"orange": "orange",
-	"white": "#FFFFFF",
-	"brown": "brown"
+	"blue": "rgb(0,0,255)",
+	"red": "rgb(255,0,0)",
+	"green": "rgb(0,255,0)",
+	"orange": "#FF9900",
+	"white": "#CCC",
+	"brown": "#CC6600",
 };
 
 Player.prototype.loadJSON = function (json) {
     // TODO: Update loading
     
 	this.colorName_ = json["color"];
+	this.playerColor_ = "player-" + json["color"];
 	this.color_ = typeof Player.nameToColorMap[this.colorName_] != "undefined" ? Player.nameToColorMap[this.colorName_] : this.colorName_;
 	this.name_ = json["user"]["nickname"];
 	this.image_ = json["userpicture"];
