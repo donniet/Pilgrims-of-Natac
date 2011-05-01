@@ -54,23 +54,25 @@ body {
 }
 
 .edge {
-    fill:rgba(0,0,0,0);
-    stroke:rgba(0,0,0,0);
+    fill:rgb(0,0,0);
+    opacity:0;
+    stroke:rgb(0,0,0);
     stroke-width:1;
 }
 
 .edge:hover {
-    fill:rgba(0,255,0,0.5);
+    fill:rgb(0,255,0);
+    opacity:0.5;
     stroke:#00ff00;
     stroke-width:1;
 }
 .vertex {
-    fill:rgba(0,0,0,0);
-    stroke:rgba(0,0,0,0);
-    stroke-width:1;
+    fill:rgb(0,0,0);
+    opacity:0;
 }
 .vertex:hover {
-    fill:rgba(0,255,0,0.5);
+    fill:rgb(0,255,0);
+    opacity:0.5;
     stroke:#00ff00;
     stroke-width:1;
 }
