@@ -38,9 +38,13 @@ function handleLoad() {
 	    {type: "settlement", element:document.getElementById("settlement-model"), center:{x:15,y:15}},
 	    {type: "city", 		 element:document.getElementById("city-model"), 	  center:{x:25,y:15}}
 	]);
+	
+
+	var playerView1 = new PlayerView(controller.getPlayer()); 
+	var diceView = new DiceView($("#diceView"), controller);
+	
 	controller.load();
 	
-	var playerView1 = new PlayerView(controller.getPlayer()); 
     
     $("#reserveLink").click(function() {
     	var responder = controller.reserve( $('#reserveEmail').val());
@@ -52,6 +56,34 @@ function handleLoad() {
     		$('#reserveMessage').text("Invitation Failed to Send.");
     	});		
     });  
+}
+
+function DiceView(diceElement, controller) {
+	this.diceElement_ = diceElement;
+	this.controller_ = controller;
+	this.diceValues_ = new Array();
+	var self = this;
+	Event.addListener(this.controller_, "diceRolled", function(diceValues) {
+		console.log("handling dice roll: " + diceValues.length);
+		self.diceValues_ = diceValues;
+		self.RenderDice();
+	});
+	Event.addListener(this.controller_, "loadBoard", function() {
+		console.log("handling board load...");
+		self.diceValues_ = self.controller_.dice_;
+		self.RenderDice();
+	});
+} 
+DiceView.prototype.RenderDice = function() {
+	this.diceElement_.empty();
+	
+	for(var i = 0; this.diceValues_ && i < this.diceValues_.length; i++) {
+		var d = this.diceValues_[i];
+		console.log("current die: " + d);
+		var dieEl = $('<img src="/static/i/Dice-' + d + '.svg" alt="' + d + '" width="50" height="50"/>');
+		console.log("die img: " + dieEl)
+		this.diceElement_.append(dieEl);
+	}
 }
 
 //]]></script>
@@ -83,6 +115,8 @@ function handleLoad() {
 <?import namespace="svg" urn="http://www.w3.org/2000/svg" implementation="#AdobeSVG"?>
 -->
 
+<div id="diceView">
+</div>
 
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" width="100%" height="1024px">
     <g id="board"></g>
@@ -104,6 +138,8 @@ function handleLoad() {
             </g>
         </svg>
     </g>
+    
+   
 
 </svg>
 </div> <!-- game-board -->

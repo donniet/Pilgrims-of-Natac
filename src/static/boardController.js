@@ -19,6 +19,7 @@ function BoardController(userToken, boardEl, actionsEl, services, models) {
 	
 	this.board_ = new Board();
 	this.player_ = new Player();
+	this.dice_ = new Array();
 	
 	this.availableActions_ = new Array();
 	this.currentAction_ = null;
@@ -66,7 +67,10 @@ BoardController.prototype.loadBoard = function() {
         while(svg.firstChild) svg.removeChild(svg.firstChild);
         self.board_.renderBoard(svg);
         
+        self.dice_ = data.diceValues;
+        
         Event.fire(responder, "loadBoard", []);
+        Event.fire(self, "diceRolled", [self.dice_]);
     });
     
     return responder;
@@ -113,6 +117,11 @@ BoardController.prototype.handleSocketMessage = function(msg) {
     	this.board_.placeRoad(message["data"]["x1"], message["data"]["y1"], message["data"]["x2"], message["data"]["y2"], message["color"]);
     	Event.fire(this, message["action"], [message["color"], message["data"]]);
         break;
+    case "diceRolled":
+    	console.log("dice Rolled: " + message["data"][0] + "," + message["data"][1]);
+    	this.dice_ = message["data"];
+    	Event.fire(this, message["action"], [message["data"]]);
+    	break;
     case "playerJoinGame":
         throw "Message not yet implemented";
     case "playerLeaveGame":

@@ -412,6 +412,17 @@ class GameState(object):
         return ret
     
     def endTurn(self, user):
+        p = self.board.getPlayer(user)
+        if p is None: 
+            logging.info("player not found %s." % user)
+            return None
+        
+        color = p.color
+        
+        if self.board.getCurrentPlayerColor() != color:
+            logging.info("not current player %s." % user)
+            return None
+        
         self.board.moveNextPlayer()
         self.board.turnPhase = 0
         self.board.put()
@@ -506,18 +517,18 @@ class GameState(object):
         p = self.board.getPlayer(user)
         if p is None: 
             logging.info("player not found %s." % user)
-            return False
+            return None
         
         color = p.color
         
         if self.board.getCurrentPlayerColor() != color:
             logging.info("not player turn %s." % user)
-            return False
+            return None
         
         tp = self.board.getCurrentTurnPhase()
         
         if tp.phase != "rollDice":
-            return False
+            return None
         
         diceValues = []
         sum = 0
@@ -562,7 +573,9 @@ class GameState(object):
         self.board.diceValues = diceValues
         self.board.put()
         
-        return True  
+        self.sendMessageAll({"action":"diceRolled", "data":diceValues})
+        
+        return diceValues  
         
     
     def get_game_key(self):
