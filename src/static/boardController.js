@@ -306,7 +306,8 @@ BoardController.prototype.beginBuildSettlement = function() {
 		console.log("vertex click:Settlement");
 		var responder = self.sendAction("placeSettlement", "{\"x\":"+vertex.position_.x+",\"y\":"+vertex.position_.y+"}");
 		Event.addListener(responder, "load", function(ret) {
-			if(!ret) alert("You cannot place a settlement there.");
+			if(!ret) Event.fire(self, "error", ["System Error"]);
+			else if(!ret.success) Event.fire(self, "error", [ret.message]);
 			
 			Event.removeListenerById(self.board_, "vertexclick", handleVertexClickId);
 			
@@ -333,7 +334,8 @@ BoardController.prototype.beginBuildCity = function() {
 		console.log("vertex click: City");
 		var responder = self.sendAction("placeCity", "{\"x\":"+vertex.position_.x+",\"y\":"+vertex.position_.y+"}");
 		Event.addListener(responder, "load", function(ret) {
-			if(!ret) alert("You cannot place a city there.");
+			if(!ret) Event.fire(self, "error", ["System Error"]);
+			else if(!ret.success) Event.fire(self, "error", [ret.message]);
 			
 			Event.removeListenerById(self.board_, "vertexclick", handleVertexClickId);
 		});
@@ -346,20 +348,24 @@ BoardController.prototype.beginBuildCity = function() {
 	return ret;
 }
 
-BoardController.prototype.beginRollDice = function() {	
+BoardController.prototype.beginRollDice = function() {
+	var self = this;
 	var responder = this.sendAction("rollDice", "null");
 	Event.addListener(responder, "load", function(ret) {
-		if(!ret) { alert("Dice roll error!  You Fail!"); }
-		else { alert("Rolled Dice!"); }
+		if(!ret) Event.fire(self, "error", ["System Error"]);
+		else if(!ret.success) Event.fire(self, "error", [ret.message]);
+		else { }
 		
 	});
 	return null;
 }
 
-BoardController.prototype.beginEndTurn = function() {	
+BoardController.prototype.beginEndTurn = function() {
+	var self = this;
 	var responder = this.sendAction("endTurn", "null");
 	Event.addListener(responder, "load", function(ret) {
-		if(!ret) { alert("Error, could not end turn.");}
+		if(!ret) Event.fire(self, "error", ["System Error"]);
+		else if(!ret.success) Event.fire(self, "error", [ret.message]);
 		else {}
 		
 	});
@@ -377,7 +383,8 @@ BoardController.prototype.beginBuildRoad = function() {
 		console.log("edge click");
 		var responder = self.sendAction("placeRoad", '{"x1":'+edge.first_.x+',"y1":'+edge.first_.y+',"x2":'+edge.second_.x+',"y2":'+edge.second_.y+"}");
 		Event.addListener(responder, "load", function(ret) {
-			if(!ret) alert("You cannot place a road there.");
+			if(!ret) Event.fire(self, "error", ["System Error"]);
+			else if(!ret.success) Event.fire(self, "error", [ret.message]);
 			
 			Event.removeListenerById(self.board_, "edgeclick", clickId);
 		});

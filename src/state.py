@@ -196,6 +196,11 @@ def get_game(gamekey):
     else:
         return s
     
+class ActionResponse(dict):
+    def __init__(self, success, message=None):
+        self["success"] = success;
+        if message is not None:
+            self["message"] = message;
 
 class GameState(object):
     board = None
@@ -368,16 +373,66 @@ class GameState(object):
         mu["stateKey"] = self.getStateKey()
         
         channel.send_message(self.gamekey + user.user_id(), json.dumps(mu))
+    
+    def startGame(self, user):
+        logging.info("starting game...")
+        if user != self.board.owner:
+            logging.info("startGame: Not Owner")
+            return ActionResponse(False, "Only the owner of the game may start it.")
+        gp = self.board.getCurrentGamePhase()
+        if gp is None or gp.phase != "joining":
+            logging.info("startGame: Not joining Phase")
+            return ActionResponse(False, "The game has already been started.")
         
+        players = self.board.getPlayers()
+        
+        np = len(players)
+        if np < self.board.minimumPlayers:
+            logging.info("startGame: Not Enough Players")
+            return ActionResponse(False, "This game requires %d players, but only %d have joined." % (self.board.minimumPlayers,np))
+        
+        bfs = self.board.getGamePhaseByName("buildFirstSettlement")
+        if bfs is None:
+            logging.info("startGame: no buildFirstSettlement gamephase")
+            return ActionResponse(False, "Error: this game has no initial building phase.  Contact game creator.")
+        
+        po = range(np)
+        random.shuffle(po)
+        
+        logging.info("bfs.order: %d" % bfs.order)
+        
+        for i in range(len(po)):
+            players[i].order = po[i]
+            players[i].put()
+        
+        self.board.dateTimeStarted = datetime.datetime.now()
+        self.board.gamePhase = bfs.order
+        if len(bfs.getTurnPhases()) > 0:
+            self.board.turnPhase = 0
+        else:
+            self.board.turnPhase = None
+            
+        self.board.playOrder = po
+        self.board.currentPlayerRef = 0 #current player is 
+        self.board.put()
+        
+        for p in players:
+            p.resetResources()
+        
+        self.sendMessageAll({"action":"chat", "data":"Game Started"})
+        
+        return ActionResponse(True);
+      
             
     def processAction(self, action, data, user):
         # before processing any action, check if we are processing one now:
         p = memcache.get("%s-processing-action" % self.board.gameKey)
         if not p is None and p:
-            return False #processing
+            return ActionResponse(False, "Another action is processing now...") #processing
         
         memcache.set("%s-processing-action" % self.board.gameKey, True, 60)
         ret = False
+        message = None
         
         logging.info("processing action: %s %s %s" % (action, data, user))
         
@@ -395,9 +450,11 @@ class GameState(object):
             ret = self.rollDice(user)
         elif action == "endTurn":
             ret = self.endTurn(user)
+        else:
+            message = "Unknown action"
         
-        if ret:
-            
+        
+        if ret and ret["success"]:
             logging.info("processing action [True]: %s %s %s" % (action, data, user))
             dataitems = []
             if data is not None and data.items() is not None:
@@ -409,24 +466,11 @@ class GameState(object):
         
         memcache.delete("%s-processing-action" % self.board.gameKey)
         
-        return ret
+        if message is not None:
+            return ActionResponse(ret, message);
+        else:
+            return ret
     
-    def endTurn(self, user):
-        p = self.board.getPlayer(user)
-        if p is None: 
-            logging.info("player not found %s." % user)
-            return None
-        
-        color = p.color
-        
-        if self.board.getCurrentPlayerColor() != color:
-            logging.info("not current player %s." % user)
-            return None
-        
-        self.board.moveNextPlayer()
-        self.board.turnPhase = 0
-        self.board.put()
-        return True
     
     def getUserActionsInner(self, user, player, currentColor, gamePhase, turnPhase):
         actions = ["quit"]
@@ -464,71 +508,40 @@ class GameState(object):
         
         return self.getUserActionsInner(user, p, c, gp, tp)    
     
-    def startGame(self, user):
-        logging.info("starting game...")
-        if user != self.board.owner:
-            logging.info("startGame: Not Owner")
-            return False
-        gp = self.board.getCurrentGamePhase()
-        if gp is None or gp.phase != "joining":
-            logging.info("startGame: Not joining Phase")
-            return False
+    
+    def endTurn(self, user):
+        p = self.board.getPlayer(user)
+        if p is None: 
+            logging.info("player not found %s." % user)
+            return ActionResponse(False, "You are not a player in this game.");
         
-        players = self.board.getPlayers()
+        color = p.color
         
-        np = len(players)
-        if np < self.board.minimumPlayers:
-            logging.info("startGame: Not Enough Players")
-            return False
+        if self.board.getCurrentPlayerColor() != color:
+            logging.info("not current player %s." % user)
+            return ActionResponse(False, "It is not your turn.");
         
-        bfs = self.board.getGamePhaseByName("buildFirstSettlement")
-        if bfs is None:
-            logging.info("startGame: no buildFirstSettlement gamephase")
-            return False
-        
-        po = range(np)
-        random.shuffle(po)
-        
-        logging.info("bfs.order: %d" % bfs.order)
-        
-        for i in range(len(po)):
-            players[i].order = po[i]
-            players[i].put()
-        
-        self.board.dateTimeStarted = datetime.datetime.now()
-        self.board.gamePhase = bfs.order
-        if len(bfs.getTurnPhases()) > 0:
-            self.board.turnPhase = 0
-        else:
-            self.board.turnPhase = None
-            
-        self.board.playOrder = po
-        self.board.currentPlayerRef = 0 #current player is 
+        self.board.moveNextPlayer()
+        self.board.turnPhase = 0
         self.board.put()
-        
-        for p in players:
-            p.resetResources()
-        
-        self.sendMessageAll({"action":"chat", "data":"Game Started"})
-        
-        return True
+        return ActionResponse(True)
     
     def rollDice(self, user):
         p = self.board.getPlayer(user)
         if p is None: 
             logging.info("player not found %s." % user)
-            return None
+            return ActionResponse(False, "You are not a player in this game.")
         
         color = p.color
         
         if self.board.getCurrentPlayerColor() != color:
             logging.info("not player turn %s." % user)
-            return None
+            return ActionResponse(False, "It is not your turn.");
         
         tp = self.board.getCurrentTurnPhase()
         
         if tp.phase != "rollDice":
-            return None
+            return ActionResponse(False, "You have already rolled the dice.");
         
         diceValues = []
         sum = 0
@@ -575,7 +588,7 @@ class GameState(object):
         
         self.sendMessageAll({"action":"diceRolled", "data":diceValues})
         
-        return diceValues  
+        return ActionResponse(True)  
         
     
     def get_game_key(self):
@@ -589,23 +602,23 @@ class GameState(object):
         p = self.board.getPlayer(user)
         if p is None:
             logging.info("player not found %s." % (user,))
-            return False
+            return ActionResponse(False, "You are not a pleyer in this game.")
         
         color = p.color
         
         if self.board.getCurrentPlayerColor() != color:
             logging.info("not player turn %s." % user)
-            return False
+            return ActionResponse(False, "It is not your turn.")
         
         e = self.board.getEdge(x1, y1, x2, y2)
         if e is None:
             logging.info("edge %d,%d,%d,%d not found", (x1, y1, x2, y2))
-            return False
+            return ActionResponse(False, "The edge you selected is not found in this game.")
         
         devs = e.getDevelopments()
         if devs and len(devs) > 0:
             logging.info("found edge development")
-            return False
+            return ActionResponse(False, "There is already a road on this edge.")
         
         adjecentVertDev = False
         adjecentEdgeDev = False
@@ -635,19 +648,19 @@ class GameState(object):
         
         if not adjecentVertDev and not adjecentEdgeDev:
             logging.info("no adjecent placements")
-            return False
+            return ActionResponse(False, "You have no developments adjecent to this edge.")
         
         np = len(self.board.getPlayers())
         gp = self.board.getCurrentGamePhase()
         tp = self.board.getCurrentTurnPhase()
         if gp is None or tp is None:
-            return False
+            return ActionResponse(False, "Error: The game has not started, or is in the incorrect phase.")
         
         #update the game/turn phase
         if gp.phase == "buildFirstSettlement":
             if tp.phase != "buildRoad":
                 logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
-                return False
+                return ActionResponse(False, "You cannot build a road now.")
             
             if self.board.currentPlayerRef < np - 1:
                 self.board.moveNextPlayer()
@@ -663,7 +676,7 @@ class GameState(object):
         elif gp.phase == "buildSecondSettlement":
             if tp.phase != "buildRoad":
                 logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
-                return False
+                return ActionResponse(False, "You cannot build a road now.")
             
             logging.info("currentPlayerRef: %d" % self.board.currentPlayerRef)
             
@@ -679,11 +692,11 @@ class GameState(object):
                 
             self.board.put()
             e.addDevelopment(color, "road")
-            return True
+            return ActionResponse(True)
         elif gp.phase == "main":
             if tp.phase != "build":
                 logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
-                return False
+                return ActionResponse(False, "You cannot build a road now.")
             else:
                 cost = self.board.getDevelopmentTypeCost("road")
                 for r in cost:
@@ -691,16 +704,16 @@ class GameState(object):
                     
                 if not p.adjustResources(cost):
                     logging.info("not enough resources to build road.")
-                    return False
+                    return ActionResponse(False, "You do not have enough resources to build a road.")
                 
                 
                 e.addDevelopment(color, "road")
-                return True
+                return ActionResponse(True)
                 
                 #TODO: does the player have any roads left?    
         else:
             logging.info("not in the correct phase (currentPhase: %s)" % gp.phase)
-            return False
+            return ActionResponse(False, "You cannot build a road now.")
         
         return False
     
@@ -716,19 +729,19 @@ class GameState(object):
         p = self.board.getPlayer(user)
         if p is None: 
             logging.info("player not found %s." % (user,))
-            return False
+            return ActionResponse(False, "You are not a player in this game")
            
         color = p.color
         
         v = self.board.getVertex(x, y)
         if v is None: 
             logging.info("vertex %d,%d not found." % (x,y) )
-            return False
+            return ActionResponse(False, "Error: The vertex you selected is not found on this board.")
         
         # are there any developments on this vertex?
         devs = v.getDevelopments()
         if devs and len(devs) > 0: 
-            return False
+            return ActionResponse(False, "There is already a development on this vertex")
         
         # is this vertex at least one unit away from another settlement or city?
         adjecentDev = False
@@ -745,12 +758,12 @@ class GameState(object):
         
         if adjecentDev:
             logging.info("too close to other developments")
-            return False
+            return ActionResponse(False, "This vertex is too close to other cities or settlements")
         
         gp = self.board.getCurrentGamePhase()
         tp = self.board.getCurrentTurnPhase()
         if gp is None or tp is None:
-            return False
+            return ActionResponse(False, "Error: The game has not started or is in the incorrect phase.")
         
         #update the game/turn phase
         if gp.phase == "buildFirstSettlement" or gp.phase == "buildSecondSettlement":
@@ -778,14 +791,14 @@ class GameState(object):
                     p.adjustResources(res)
                 #self.sendMessageAll({'action': 'placeSettlement', 'x':x, 'y':y, 'color':color})
                 
-                return True
+                return ActionResponse(True)
             else:
                 logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
-                return False
+                return ActionResponse(False, "You cannot build a settlement now")
         elif gp.phase == "main":
             if tp.phase != "build":
                 logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
-                return False
+                return ActionResponse(False, "You cannot build a settlement now")
             else:
                 adj_edge = v.getAdjecentEdges()
                 has_adj_road = False
@@ -800,7 +813,7 @@ class GameState(object):
                 
                 if not has_adj_road:
                     logging.info("No adjecent roads to place settlement")
-                    return False
+                    return ActionResponse(False, "You have no roads adjecent to this vertex")
                                 
                 cost = self.board.getDevelopmentTypeCost("settlement")
                 for r in cost:
@@ -808,16 +821,16 @@ class GameState(object):
                     
                 if not p.adjustResources(cost):
                     logging.info("Not enough resources to place settlement")
-                    return False
+                    return ActionResponse(False, "You do not have enough resources to build a settlement")
                 #TODO: does the player have any settlements left?
                 
                 v.addDevelopment(color, "settlement")
-                return True
+                return ActionResponse(True) 
         else:
-            return False 
+            return ActionResponse(False, "You cannot build a settlement now") 
                 
         #self.sendMessageAll({'action': 'placeSettlement', 'x':x, 'y':y, 'color':color})
-        return False
+        return ActionResponse(False, "You cannot build a settlement now")
     def placeCity(self, x, y, user):
         #logging.info("placeSettlement: " + data)
         #TODO: does the player have enough resources to buy a city?
@@ -827,17 +840,17 @@ class GameState(object):
         
         p = self.board.getPlayer(user)
         if p == None: 
-            return False
+            return ActionResponse(False, "You are not a player in this game")
            
         color = p.color
         
         v = self.board.getVertex(x, y)
         if v == None:
-            return False
+            return ActionResponse(False, "Error: The vertex you selected is not found on this board.")
         
         devs = v.getDevelopments()
         if not devs or len(devs) == 0: 
-            return False
+            return ActionResponse(False, "You have no settlement on this vertex")
         
         for d in devs:
             if d.type == "settlement" and d.color == color:
@@ -846,13 +859,13 @@ class GameState(object):
                     cost[r] = -cost[r]
                     
                 if not p.adjustResources(cost):
-                    return False
+                    return ActionResponse(False, "You do not have enough resources to build a city.")
                 
                 d.type = "city"
                 d.put()
-                return True
+                return ActionResponse(True) 
             
-        return False
+        return ActionResponse(False, "You have no settlement on this vertex")
     
     
 

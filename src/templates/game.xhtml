@@ -42,6 +42,7 @@ function handleLoad() {
 
 	var playerView1 = new PlayerView(controller.getPlayer()); 
 	var diceView = new DiceView($("#diceView"), controller);
+	var errorView = new ErrorView($("#errorMessage"), controller);
 	
 	controller.load();
 	
@@ -56,6 +57,34 @@ function handleLoad() {
     		$('#reserveMessage').text("Invitation Failed to Send.");
     	});		
     });  
+}
+
+function ErrorView(errorElement, controller) {
+	this.controller_ = controller;
+	this.errorEl_ = errorElement;
+	this.errorInterval_ = null;
+	this.errorClearTime_ = 5000; // 5 seconds
+	var self = this;
+	Event.addListener(this.controller_, "error", function(error) {
+		self.renderError(error);
+	});
+}
+ErrorView.prototype.renderError = function(error) {
+	this.clearError();
+	// for now just display the message
+	this.errorEl_.append(error);
+	
+	var self = this;
+	this.errorInterval_ = setTimeout(function() {
+		self.clearError();
+	}, this.errorClearTime_);
+}
+ErrorView.prototype.clearError = function() {
+	if(this.errorInterval_) {
+		clearInterval(this.errorInterval_);
+		this.errorInterval_ = null;
+	}
+	this.errorEl_.empty();
 }
 
 function DiceView(diceElement, controller) {
@@ -102,6 +131,8 @@ DiceView.prototype.RenderDice = function() {
         {% if isOwner %}
         	<input id="reserveEmail" type="text" /> <a href="javascript:void(0)" id="reserveLink">Reserve</a> <span id="reserveMessage"></span>
         {% endif %}
+        
+        <span id="errorMessage"></span>
     </div>
 
     <div id="game-board">
