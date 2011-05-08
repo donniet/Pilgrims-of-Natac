@@ -17,8 +17,11 @@
 <script type="text/javascript" src="/static/event.js"></script>
 <script type="text/javascript" src="/static/player.jq.js"></script>
 <script type="text/javascript" src="/static/board.js"></script>
-<script type="text/javascript" src="/static/boardView.js"></script>
-<script type="text/javascript" src="/static/actionsView.js"></script>
+<script type="text/javascript" src="/static/view/boardView.js"></script>
+<script type="text/javascript" src="/static/view/actionsView.js"></script>
+<script type="text/javascript" src="/static/view/diceView.js"></script>
+<script type="text/javascript" src="/static/view/playerListView.js"></script>
+<script type="text/javascript" src="/static/view/errorView.js"></script>
 <script type="text/javascript">//<![CDATA[
 
 function getCookie(name) {
@@ -68,149 +71,8 @@ function handleLoad() {
     });  
 }
 
-function PlayerListItemView(playerElement) {
-	this.playerElement_ = $(playerElement);
-	
-	this.player_ = null;
-}
-PlayerListItemView.prototype.setPlayer = function(player) {
-	this.player_ = player;
-	
-	this.render();
-}
-	
-PlayerListItemView.prototype.render = function() {	
-	var span = $("<span></span>");
-	span.append(this.player_.getName());
-	
-	this.playerElement_.append(span);	
-}
 
-function PlayerListView(playersElement) {
-	this.playersElement_ = $(playersElement);
-	this.board_ = null;
-	this.playerListItemViews_ = null;
-	this.loadListenerId_ = null;
-}
-PlayerListView.prototype.setBoard = function(board) {
-	if(this.board_) {
-		Event.removeListenerById(this.board_, "load", this.loadListenerId_);
-		this.board_ = null;
-		this.loadListenerId_ = null;
-	}
-	
-	var self = this;
-	this.board_ = board;
-	this.loadListenerId_ = Event.addListener(this.board_, "load", function() {
-		self.render();
-	});
-	
-	this.render();
-}
-PlayerListView.prototype.render = function() {
-	this.playersElement_.empty();
-	
-	var ul = $("<ul></ul>");
-	this.playersElement_.append(ul);
-	
-	this.playerListItemViews_ = new Array();
-	
-	var players = this.board_.getPlayers();
-	console.log("player count: " + players.length);
-	
-	for(var i = 0; i < players.length; i++) {
-		var li = $("<li></li>");
-		
-		var p = players[i];
-		
-		var pv = new PlayerListItemView(li);
-		pv.setPlayer(p);
-		
-		ul.append(li);
-		this.playerListItemViews_.push(pv);
-	}
-}
 
-function ErrorView(errorElement) {
-	this.board_ = null;
-	this.errorEl_ = errorElement;
-	this.errorInterval_ = null;
-	this.errorClearTime_ = 5000; // 5 seconds
-	var self = this;
-	
-	this.errorListenerId_ = null;
-}
-ErrorView.prototype.setBoard = function(board) {
-	if(this.board_) {
-		Event.removeListenerById(this.board_, "error", this.errorListenerId_);
-		this.board_ = null;
-		this.errorListenerId_ = null;
-	}
-	this.board_ = board;
-	var self = this;
-	this.errorListenerId_ = Event.addListener(this.board_, "error", function(error) {
-		self.renderError(error);
-	});
-}
-ErrorView.prototype.renderError = function(error) {
-	this.clearError();
-	// for now just display the message
-	this.errorEl_.append(error);
-	
-	var self = this;
-	this.errorInterval_ = setTimeout(function() {
-		self.clearError();
-	}, this.errorClearTime_);
-}
-ErrorView.prototype.clearError = function() {
-	if(this.errorInterval_) {
-		clearInterval(this.errorInterval_);
-		this.errorInterval_ = null;
-	}
-	this.errorEl_.empty();
-}
-
-function DiceView(diceElement) {
-	this.diceElement_ = diceElement;
-	this.board_ = null;
-	this.diceRolledListenerId_ = null;
-	var self = this;
-	Event.addListener(this.controller_, "diceRolled", function(diceValues) {
-		console.log("handling dice roll: " + diceValues.length);
-		self.diceValues_ = diceValues;
-		self.RenderDice();
-	});
-	Event.addListener(this.controller_, "loadBoard", function() {
-		console.log("handling board load...");
-		self.diceValues_ = self.controller_.dice_;
-		self.RenderDice();
-	});
-}
-DiceView.prototype.setBoard = function(board) {
-	if(this.board_) {
-		Event.removeListenerById(this.board_, "diceRolled", this.diceRolledListenerId_);
-		this.board_ = null;
-		this.diceRolledListenerId_ = null;		
-	}
-	this.board_ = board;
-	var self = this;
-	this.diceRolledListenerId_ = Event.addListener(this.board_, "diceRolled", function() {
-		self.render();
-	});
-}
-DiceView.prototype.render = function() {
-	this.diceElement_.empty();
-	
-	var dice = this.board_.getDice();
-	
-	for(var i = 0; dice && i < dice.length; i++) {
-		var d = dice[i];
-		console.log("current die: " + d);
-		var dieEl = $('<img src="/static/i/Dice-' + d + '.svg" alt="' + d + '" width="50" height="50"/>');
-		console.log("die img: " + dieEl)
-		this.diceElement_.append(dieEl);
-	}
-}
 
 //]]></script>
 </head>
