@@ -71,6 +71,10 @@ body {
     stroke-width:1;
 }
 
+.desert + .hexlabel-back, .desert + .hexlabel-back + .hexlabel {
+	visibility:hidden;
+}
+
 .hexlabel {
 	font-family:Courier New;
 	font-size:26px;
