@@ -251,21 +251,40 @@ BoardView.prototype.renderHex = function (hex, svgEl) {
 
     var pp = this.hexCoords(hex.position_.x, hex.position_.y);
     var points = "";
+    var pointsi = "";
+    var cx = (pp[0].x + pp[1].x) / 2;
+    var cy = (pp[0].y + pp[4].y) / 2;
+    var alpha = 0.9;
+    
     for (var i = 0; i < pp.length; i++) {
         points += pp[i].x + " " + pp[i].y + " ";
+        pointsi += ((pp[i].x - cx)*alpha + cx) + " " + ((pp[i].y - cy)*alpha + cy) + " ";
     }
     var p = svgEl.ownerDocument.createElementNS(this.svgns_, "polygon");
+    var pi = svgEl.ownerDocument.createElementNS(this.svgns_, "polygon");
+    var hit = svgEl.ownerDocument.createElementNS(this.svgns_, "polygon");
 
     p.setAttribute("points", points);
+    hit.setAttribute("points", points);
+    pi.setAttribute("points", pointsi);
     //HACK: replace with better way to style
-    p.setAttribute("class", "hex " + hex.hexType_);
+    p.setAttribute("class", "hex");
+    hit.setAttribute("class", "hex-hitarea");
+    pi.setAttribute("class", "hex-inner " + hex.hexType_);
     g.appendChild(p);
+    g.appendChild(pi);
 
     var self = this;
-    p.onclick = function () { Event.fire(self, "hexclick", [hex]); };
-    p.onmouseover = function () { Event.fire(self, "hexover", [hex]); };
-    p.onmouseout = function () { Event.fire(self, "hexout", [hex]); };
+    hit.onclick = function () { Event.fire(self, "hexclick", [hex]); };
+    hit.onmouseover = function () { Event.fire(self, "hexover", [hex]); };
+    hit.onmouseout = function () { Event.fire(self, "hexout", [hex]); };
 
+    var circ = svgEl.ownerDocument.createElementNS(this.svgns_, "circle");
+    circ.setAttribute("cx", cx);
+    circ.setAttribute("cy", cy);
+    circ.setAttribute("r", Math.abs((pp[0].x - pp[1].x) / 3.75));
+    circ.setAttribute("class", "hexlabel-back");
+    g.appendChild(circ);
 
     var txt = svgEl.ownerDocument.createElementNS(this.svgns_, "text");
     txt.appendChild(svgEl.ownerDocument.createTextNode(hex.value_));
@@ -273,13 +292,14 @@ BoardView.prototype.renderHex = function (hex, svgEl) {
     if(hex.value_ == 6 || hex.value_ == 8) className += " labelemph";
     
     txt.setAttribute("class", className);
-    txt.setAttribute("x", (pp[0].x + pp[1].x) / 2 - 10);
-    txt.setAttribute("y", (pp[0].y + pp[4].y) / 2 + 10);
-    txt.onclick = function () { Event.fire(self, "hexclick", [hex]); };
-    txt.onmouseover = function () { Event.fire(self, "hexover", [hex]); };
-    txt.onmouseout = function () { Event.fire(self, "hexout", [hex]); };
+    var xadj = -8;
+    if(hex.value_ >= 10) xadj = -15;
+    txt.setAttribute("x", (pp[0].x + pp[1].x) / 2 + xadj);
+    txt.setAttribute("y", (pp[0].y + pp[4].y) / 2 + 8);
 
     g.appendChild(txt);
+    
+    g.appendChild(hit);
 }
 
 BoardView.prototype.highlightBuildableVertex = function(player) {

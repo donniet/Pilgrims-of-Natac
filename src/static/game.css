@@ -4,58 +4,76 @@ body {
     background: url(/static/i/wood_100.jpg);
     font-family: Constantia, ‘Lucida Bright’, Lucidabright, ‘Lucida Serif’, Lucida, ‘DejaVu Serif’, ‘Bitstream Vera Serif’, ‘Liberation Serif’, Georgia, serif;
 }
-.fields {
-    fill:#005555;
-    stroke:#000000;
-    stroke-width:1;
+
+.sheep {
+    background-color: #BFE882;
 }
-.fields:hover {
-    fill:#22FF77;
+
+.wheat {
+    background-color: #FFEF4F;
+}
+
+.wood {
+    background-color: #00932C;
+}
+
+.rock {
+    background-color: #787887;
+}
+
+.clay {
+    background-color: firebrick;
+}
+.hex {
+	fill:#F5F5FF;
+	stroke: #CCCCCC;
+	stroke-width:1;
+}
+.hexlabel-back {
+	fill:#F5F5FF;
+	stroke:#CCCCCC;
+}
+.hex-hitarea {
+	fill:#22FF77;
+	opacity:0;
+}
+.hex-hitarea:hover {
+	opacity:0.5;
+}
+.fields {
+    fill:#FFEF4F;
+    stroke:#DDCD2D;
+    stroke-width:1;
 }
 .forest {
-    fill:#229933;
-    stroke:#000000;
+    fill:#00932C;
+    stroke:#00710A;
     stroke-width:1;
-}
-.forest:hover {
-    fill:#22FF77;
 }
 .pasture {
-    fill:#FFD700;
-    stroke:#000000;
+    fill:#BFE882;
+    stroke:#9DC770;
     stroke-width:1;
-}
-.pasture:hover {
-    fill:#22FF77;
 }
 .hills {
-    fill:#8E2323;
-    stroke:#000000;
+    fill:#B22222;
+    stroke:#900000;
     stroke-width:1;
 }
-.hills:hover {
-    fill:#22FF77;
-}
 .mountains {
-    fill:#cccccc;
-    stroke:#000000;
-    stroke-width:1
-}
-.mountains:hover {
-    fill:rgba(204,255,204,1);
+    fill:#787887;
+    stroke:#565665;
+    stroke-width:1;
 }
 .desert {
     fill:#fafad2;
-    stroke:#000000;
-    stroke-width:1
-}
-.desert:hover {
-    fill:#22FF77;               
+    stroke:#D8D8B0;
+    stroke-width:1;
 }
 
 .hexlabel {
-	font-family:Verdana;
-	font-size:24px;
+	font-family:Courier New;
+	font-size:26px;
 	stroke:#000000;
 	fill:#000000;
 }
@@ -285,25 +303,6 @@ body {
     height: 100%;
 }
 
-.sheep {
-    background-color: #BFE882;
-}
-
-.wheat {
-    background-color: #FFEF4F;
-}
-
-.wood {
-    background-color: #00932C;
-}
-
-.rock {
-    background-color: #787887;
-}
-
-.clay {
-    background-color: firebrick;
-}
 
 #errorMessage {
 	color: #FF7777;
