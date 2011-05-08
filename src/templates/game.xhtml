@@ -17,6 +17,8 @@
 <script type="text/javascript" src="/static/event.js"></script>
 <script type="text/javascript" src="/static/player.jq.js"></script>
 <script type="text/javascript" src="/static/board.js"></script>
+<script type="text/javascript" src="/static/boardView.js"></script>
+<script type="text/javascript" src="/static/actionsView.js"></script>
 <script type="text/javascript" src="/static/boardController.js"></script>
 <script type="text/javascript">//<![CDATA[
 
@@ -27,24 +29,30 @@ function getCookie(name) {
 
 
 function handleLoad() {
-	var controller = new BoardController("{{token}}", document.getElementById("board"), $("#actions"), 
+	var boardView = new BoardView(document.getElementById("board"), 
+	[
+   	    {type: "settlement", element:document.getElementById("settlement-model"), center:{x:15,y:15}},
+   	    {type: "city", 		 element:document.getElementById("city-model"), 	  center:{x:25,y:15}}
+   	]);
+	var actionsView = new ActionsView($("#actions"));
+	var errorView = new ErrorView($("#errorMessage"));
+	var playerListView = new PlayerListView($("#players"));
+	var diceView = new DiceView($("#diceView"), controller);
+	var playerView1 = new PlayerView($("#pp"));
+		
+	var controller = new BoardController("{{token}}", boardView, actionsView, errorView, playerListView, diceView, playerView1,
 	/* services */ {
 		"board-json-url": "{{boardUrl}}",
 		"player-json-url": "{{playerUrl}}",
 		"action-json-url": "{{actionUrl}}",
 		"reservation-json-url": "{{reservationUrl}}"
-	}, 
-	/* models */ [
-	    {type: "settlement", element:document.getElementById("settlement-model"), center:{x:15,y:15}},
-	    {type: "city", 		 element:document.getElementById("city-model"), 	  center:{x:25,y:15}}
-	]);
+	});
 	
-
-	var playerView1 = new PlayerView(controller.getPlayer()); 
-	var diceView = new DiceView($("#diceView"), controller);
-	var errorView = new ErrorView($("#errorMessage"), controller);
+ 
+	
 	
 	controller.load();
+	
 	
     
     $("#reserveLink").click(function() {
@@ -59,13 +67,87 @@ function handleLoad() {
     });  
 }
 
-function ErrorView(errorElement, controller) {
-	this.controller_ = controller;
+function PlayerListItemView(playerElement) {
+	this.playerElement_ = $(playerElement);
+	
+	this.player_ = null;
+}
+PlayerListItemView.prototype.setPlayer = function(player) {
+	this.player_ = player;
+	
+	this.render();
+}
+	
+PlayerListItemView.prototype.render = function() {	
+	var span = $("<span></span>");
+	span.append(this.player_.getName());
+	
+	this.playerElement_.append(span);	
+}
+
+function PlayerListView(playersElement) {
+	this.playersElement_ = $(playersElement);
+	this.board_ = null;
+	this.playerListItemViews_ = null;
+	this.loadListenerId_ = null;
+}
+PlayerListView.prototype.setBoard = function(board) {
+	if(this.board_) {
+		Event.removeListenerById(this.board_, "load", this.loadListenerId_);
+		this.board_ = null;
+		this.loadListenerId_ = null;
+	}
+	
+	var self = this;
+	this.board_ = board;
+	this.loadListenerId_ = Event.addListener(this.board_, "load", function() {
+		self.render();
+	});
+	
+	this.render();
+}
+PlayerListView.prototype.render = function() {
+	this.playersElement_.empty();
+	
+	var ul = $("<ul></ul>");
+	this.playersElement_.append(ul);
+	
+	this.playerListItemViews_ = new Array();
+	
+	var players = this.board_.getPlayers();
+	console.log("player count: " + players.length);
+	
+	for(var i = 0; i < players.length; i++) {
+		var li = $("<li></li>");
+		
+		var p = players[i];
+		
+		var pv = new PlayerListItemView(li);
+		pv.setPlayer(p);
+		
+		ul.append(li);
+		this.playerListItemViews_.push(pv);
+	}
+}
+
+function ErrorView(errorElement) {
+	this.board_ = null;
 	this.errorEl_ = errorElement;
 	this.errorInterval_ = null;
 	this.errorClearTime_ = 5000; // 5 seconds
 	var self = this;
-	Event.addListener(this.controller_, "error", function(error) {
+	
+	this.errorListenerId_ = null;
+}
+ErrorView.prototype.setBoard = function(board) {
+	if(this.board_) {
+		Event.removeListenerById(this.board_, "error", this.errorListenerId_);
+		this.board_ = null;
+		this.errorListenerId_ = null;
+	}
+	this.board_ = board;
+	var self = this;
+	this.errorListenerId_ = Event.addListener(this.board_, "error", function(error) {
 		self.renderError(error);
 	});
 }
@@ -87,10 +169,10 @@ ErrorView.prototype.clearError = function() {
 	this.errorEl_.empty();
 }
 
-function DiceView(diceElement, controller) {
+function DiceView(diceElement) {
 	this.diceElement_ = diceElement;
-	this.controller_ = controller;
-	this.diceValues_ = new Array();
+	this.board_ = null;
+	this.diceRolledListenerId_ = null;
 	var self = this;
 	Event.addListener(this.controller_, "diceRolled", function(diceValues) {
 		console.log("handling dice roll: " + diceValues.length);
@@ -102,12 +184,26 @@ function DiceView(diceElement, controller) {
 		self.diceValues_ = self.controller_.dice_;
 		self.RenderDice();
 	});
-} 
-DiceView.prototype.RenderDice = function() {
+}
+DiceView.prototype.setBoard = function(board) {
+	if(this.board_) {
+		Event.removeListenerById(this.board_, "diceRolled", this.diceRolledListenerId_);
+		this.board_ = null;
+		this.diceRolledListenerId_ = null;		
+	}
+	this.board_ = board;
+	var self = this;
+	this.diceRolledListenerId_ = Event.addListener(this.board_, "diceRolled", function() {
+		self.render();
+	});
+}
+DiceView.prototype.render = function() {
 	this.diceElement_.empty();
 	
-	for(var i = 0; this.diceValues_ && i < this.diceValues_.length; i++) {
-		var d = this.diceValues_[i];
+	var dice = this.board_.getDice();
+	
+	for(var i = 0; dice && i < dice.length; i++) {
+		var d = dice[i];
 		console.log("current die: " + d);
 		var dieEl = $('<img src="/static/i/Dice-' + d + '.svg" alt="' + d + '" width="50" height="50"/>');
 		console.log("die img: " + dieEl)
@@ -174,6 +270,10 @@ DiceView.prototype.RenderDice = function() {
 
 </svg>
 </div> <!-- game-board -->
+
+<div id="players">
+
+</div>
 
 <div id="pp">
     <div id="pp-bg"></div>

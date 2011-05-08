@@ -53,6 +53,17 @@ body {
     fill:#22FF77;               
 }
 
+.hexlabel {
+	font-family:Verdana;
+	font-size:24px;
+	stroke:#000000;
+	fill:#000000;
+}
+.labelemph {
+	stroke:#FF0000;
+	fill:#FF0000;
+}
+
 .edge {
     fill:rgb(0,0,0);
     opacity:0;

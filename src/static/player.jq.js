@@ -1,7 +1,7 @@
 
 
 
-function Player() {
+function Player(services) {
     this.score_ = 0;
     this.name_ = "";
     this.image_ = null;
@@ -11,6 +11,7 @@ function Player() {
     this.colorName_ = "black";
     this.active_ = false;
     this.isLocal_ = false;
+    this.playerUrl_ = typeof services == "undefined" ? null : services["player-json-url"];
 
     /* only populated for the local player */
     this.resources_ = new Array();
@@ -27,6 +28,26 @@ Player.nameToColorMap = {
 	"white": "#CCC",
 	"brown": "#CC6600",
 };
+
+
+Player.prototype.load = function() {
+	var responder = new Object();
+	
+	var self = this;
+	
+	jQuery.getJSON(this.playerUrl_, function(data) {
+		if(! data || data["error"]) {
+			Event.fire(responder, "error", []);
+		}
+		else {
+        	self.isLocal_ = (this.playerUrl_ != null);
+        	self.loadJSON(data);
+		}
+    });
+	
+	return responder;
+}
+
 
 Player.prototype.loadJSON = function (json) {
     // TODO: Update loading
@@ -45,19 +66,15 @@ Player.prototype.loadJSON = function (json) {
 		});
 	}
 	
-    Event.fire(this, "playerload", [this]);
+    Event.fire(this, "load", [this]);
 }
 
-Player.prototype.loadPlayer = function (source) {
-    // TODO: Update loading
-
-    Event.fire(this, "playerload", [this]);
-}
+Player.prototype.getName = function() { return this.name_; }
 
 
-function PlayerView(player) {
-    this.el_ = null;
-    this.player_ = player;
+function PlayerView(el) {
+    this.el_ = el;
+    this.player_ = null;
 
     this.imageEl_ = null;
     this.scoreEl_ = null;
@@ -69,7 +86,11 @@ function PlayerView(player) {
     this.resourcesEl_ = null;
     this.bonusesEl_ = null;
     
-    Event.addListener(this.player_, "playerload", this.handleUpdate, this);
+}
+PlayerView.prototype.setBoard = function(board) {
+	this.player_ = board.getCurrentPlayer();
+	
+    Event.addListener(this.player_, "load", this.handleUpdate, this);
 }
 PlayerView.prototype.handleUpdate = function () {
     if (this.imageEl_) this.imageEl_.src = this.player_.image_;
@@ -173,7 +194,7 @@ PlayerView.prototype.render = function (el) {
 
 }
 PlayerView.prototype.renderResources = function () {
-	console.log("rendering resources...");
+	//console.log("rendering resources...");
     var _p = this;
 
     var _find = function(resourceType) {
@@ -198,10 +219,10 @@ PlayerView.prototype.renderResources = function () {
 }
 
 PlayerView.prototype.findResource = function(resourceType) {
-	console.log("looking for " + resourceType);
+	//console.log("looking for " + resourceType);
     for (var i = 0; i < this.player_.resources_.length; i++) {
         if( this.player_.resources_[i].resource == resourceType ){
-        	console.log("found " + resourceType + " = " + this.player_.resources_[i].amount);
+        	//console.log("found " + resourceType + " = " + this.player_.resources_[i].amount);
             return this.player_.resources_[i];
         }
     }
