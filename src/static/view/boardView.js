@@ -33,8 +33,8 @@ BoardView.prototype.hexCoords = function (nx, ny) {
 }
 BoardView.prototype.setBoard = function(board) {
 	if(this.board_) {
-		Event.removeListenerById(this.board_, "addVertexDevelopment", this.vertexDevListener_);
-		Event.removeListenerById(this.board_, "addEdgeDevelopment", this.edgeDevListener_);
+		Event.removeListenerById(this.board_, "placeVertexDevelopment", this.vertexDevListener_);
+		Event.removeListenerById(this.board_, "placeEdgeDevelopment", this.edgeDevListener_);
 		Event.removeListenerById(this.board_, "load", this.loadListener_);
 	}
 	

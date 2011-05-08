@@ -672,7 +672,7 @@ class GameState(object):
                 
             self.board.put()
             e.addDevelopment(color, "road")
-            return True
+            return ActionResponse(True)
         elif gp.phase == "buildSecondSettlement":
             if tp.phase != "buildRoad":
                 logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)

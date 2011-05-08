@@ -61,7 +61,7 @@ function handleLoad() {
 	board.load();
 			    
     $("#reserveLink").click(function() {
-    	var responder = controller.reserve( $('#reserveEmail').val());
+    	var responder = board.reserve( $('#reserveEmail').val());
     	Event.addListener(responder, "reserved", function() {
     		$('#reserveMessage').text("Sent Invitation.");
     		$('#reserveEmail').val("");
