@@ -19,7 +19,6 @@
 <script type="text/javascript" src="/static/board.js"></script>
 <script type="text/javascript" src="/static/boardView.js"></script>
 <script type="text/javascript" src="/static/actionsView.js"></script>
-<script type="text/javascript" src="/static/boardController.js"></script>
 <script type="text/javascript">//<![CDATA[
 
 function getCookie(name) {
@@ -35,26 +34,28 @@ function handleLoad() {
    	    {type: "city", 		 element:document.getElementById("city-model"), 	  center:{x:25,y:15}}
    	]);
 	var actionsView = new ActionsView($("#actions"));
+	actionsView.setBoardView(boardView);
 	var errorView = new ErrorView($("#errorMessage"));
 	var playerListView = new PlayerListView($("#players"));
-	var diceView = new DiceView($("#diceView"), controller);
+	var diceView = new DiceView($("#diceView"));
 	var playerView1 = new PlayerView($("#pp"));
-		
-	var controller = new BoardController("{{token}}", boardView, actionsView, errorView, playerListView, diceView, playerView1,
-	/* services */ {
+	
+	var board = new Board("{{token}}", {
 		"board-json-url": "{{boardUrl}}",
 		"player-json-url": "{{playerUrl}}",
 		"action-json-url": "{{actionUrl}}",
 		"reservation-json-url": "{{reservationUrl}}"
 	});
 	
- 
-	
-	
-	controller.load();
-	
-	
+	actionsView.setBoard(board);
+	boardView.setBoard(board);
+	errorView.setBoard(board);
+	playerListView.setBoard(board);
+	diceView.setBoard(board);
+	playerView1.setBoard(board);
     
+	board.load();
+			    
     $("#reserveLink").click(function() {
     	var responder = controller.reserve( $('#reserveEmail').val());
     	Event.addListener(responder, "reserved", function() {

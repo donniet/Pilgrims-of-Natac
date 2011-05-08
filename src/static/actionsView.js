@@ -90,9 +90,10 @@ ActionsView.prototype.handleBeginAction = function(eventName, action) {
 	});
 	this.render();
 }
-ActionsView.prototype.handleCompleteAction = function() {
-	Event.fire(this, "action", arguments);
-	
+ActionsView.prototype.handleCompleteAction = function(action, data) {
+	//HACK: I'm honestly not sure if this voilates MVC or not...
+	this.board_.sendAction(action, data);
+		
 	this.cancelAction();
 }
 
