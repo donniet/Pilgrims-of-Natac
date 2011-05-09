@@ -12,14 +12,16 @@ function ActionsView(actionsElement) {
 	this.actionsChangedHandlerId_ = null;
 	this.loadListenerId_ = null;
 	
+	this.contextActionsBox_ = null;
+	
 	
 }
 ActionsView.prototype.setBoardView = function(boardView) {
 	var self = this;
 	this.boardView_ = boardView;
-	Event.addListener(this.boardView_, "vertexclick", function() { self.handleVertexClick.apply(self, arguments); });
-	Event.addListener(this.boardView_, "edgeclick", function() { self.handleEdgeClick.apply(self, arguments); });
-	Event.addListener(this.boardView_, "hexclick", function() { self.handleHexClick.apply(self, arguments); });
+	Event.addListener(this.boardView_, "vertexclick", function(vertex, evt) { self.handleBoardClick(Action.RequiredData.VERTEX, vertex, evt); });
+	Event.addListener(this.boardView_, "edgeclick", function(edge, evt) { self.handleBoardClick(Action.RequiredData.EDGE, edge, evt); });
+	Event.addListener(this.boardView_, "hexclick", function(hex, evt) { self.handleBoardClick(Action.RequiredData.HEX, hex, evt); });
 }
 ActionsView.prototype.setBoard = function(board) {
 	var self = this;
@@ -34,6 +36,8 @@ ActionsView.prototype.setBoard = function(board) {
 	//this.loadListenerId_ = Event.addListener(this.board_, "load", function() {self.cancelAction();})
 }
 ActionsView.prototype.render = function() {
+	this.hideContextActions();
+	
 	this.actionsElement_.empty();
 	var ul = $("<ul/>");
 	
@@ -77,31 +81,81 @@ ActionsView.prototype.cancelAction = function(doRender /* = true */) {
 	if(doRender) this.render();
 }
 
-ActionsView.prototype.handleVertexClick = function(vertex) {
+ActionsView.prototype.handleBoardClick = function(requiredData, obj, evt) {
 	if(this.currentAction_) {
-		this.handleCompleteAction(this.currentAction_, vertex);
+		this.handleCompleteAction(this.currentAction_, obj);
 	}
 	else {
 		// here we guess what action they wanted to take
+		var actions = this.board_.getAvailableActions();
+		var context = new Array();
 		
+		var context = actions.filter(function(a) { return a.requiredData == requiredData; });
+		
+		if(context.length == 0) {
+			// do nothing-- ignore the click
+		}
+		else if(context.length == 1) {
+			// only one action available, we can safely assume this is what the user meant
+			this.handleCompleteAction(context[0], obj);
+		}
+		else {
+			//TODO: show context menu with all actions available to this click
+			this.renderContextActions(context, obj, evt);
+		}
 	}
 }
-ActionsView.prototype.handleEdgeClick = function(edge) {
-	if(this.currentAction_) {
-		this.handleCompleteAction(this.currentAction_, edge);
+
+ActionsView.prototype.renderContextActions = function(contextActions, obj, evt) {
+	this.hideContextActions();
+	
+	var ca = $("<div id='context-actions'/>");
+	var ul = $("<ul/>");
+	ca.append(ul);
+	
+	var self = this;
+	
+	for(var i = 0; i < contextActions.length; i++) {
+		var action = contextActions[i];
+		var li = $("<li/>");
+		var a = $("<a href='javascript:void(0);'/>");
+		a.click(function(action) { return function() {
+			self.handleCompleteAction(action, obj);
+			self.hideContextActions();
+		} }(action));
+		a.text(action.displayText);
+		li.append(a);
+		ul.append(li);
 	}
-	else {
-		// here we guess what action they wanted to take
+	var li = $("<li/>");
+	var a = $("<a href='javascript:void(0);'/>");
+	a.click(function() { self.hideContextActions();	});
+	a.text("Cancel");
+	li.append(a);
+	ul.append(li);
+	
+	var scrollTop = document.body.scrollTop ? document.body.scrollTop : document.documentElement.scrollTop; 
+	var scrollLeft = document.body.scrollLeft ? document.body.scrollLeft : document.documentElement.scrollLeft;
+	ca.css("position", "absolute");
+	ca.css("left", evt.clientX + scrollLeft + "px");
+	ca.css("top", evt.clientY + scrollTop + "px");
 		
+	$(document.body).append(ca);
+	
+	this.contextActionsBox_ = ca;
+}
+ActionsView.prototype.calculateContextPosition = function(obj, evt) {
+	if(obj.svgEl_) {
+		var rect = obj.svgEl_.getBBox();
+		return {left:rect.x + rect.width/2.0, top:rect.y + rect.height/2.0};
 	}
 }
-ActionsView.prototype.handleHexClick = function(hex) {
-	if(this.currentAction_) {
-		this.handleCompleteAction(this.currentAction_, hex);
-	}
-	else {
-		// here we guess what action they wanted to take
-		
+
+ActionsView.prototype.hideContextActions = function() {
+	if(this.contextActionsBox_ != null) {
+		this.contextActionsBox_.hide();
+		this.contextActionsBox_.remove();
+		this.contextActionsBox_ = null;
 	}
 }
 

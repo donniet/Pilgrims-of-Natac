@@ -15,6 +15,13 @@ body {
     font-family: Constantia, ‘Lucida Bright’, Lucidabright, ‘Lucida Serif’, Lucida, ‘DejaVu Serif’, ‘Bitstream Vera Serif’, ‘Liberation Serif’, Georgia, serif;
 }
 
+#context-actions {
+	font-family: Verdana, Arial, Sans-Serif;
+	font-size: 12px;
+	background-color: #FDFDFD;
+	padding:10px;
+}
+
 .sheep {
     background-color: #BFE882;
 }

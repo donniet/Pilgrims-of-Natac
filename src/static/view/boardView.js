@@ -145,9 +145,9 @@ BoardView.prototype.renderVertexHitArea = function (vertex, svgEl) {
     c.setAttribute("class", "vertex");
 
     var self = this;
-    c.onclick = function () { Event.fire(self, "vertexclick", [vertex]); };
-    c.onmouseover = function () { Event.fire(self, "vertexover", [vertex]); };
-    c.onmouseout = function () { Event.fire(self, "vertexout", [vertex]); };
+    c.onclick = function (evt) { Event.fire(self, "vertexclick", [vertex, evt]); };
+    c.onmouseover = function (evt) { Event.fire(self, "vertexover", [vertex, evt]); };
+    c.onmouseout = function (evt) { Event.fire(self, "vertexout", [vertex, evt]); };
 
     svgEl.appendChild(c);
 }
@@ -237,9 +237,9 @@ BoardView.prototype.renderEdgeHitArea = function (edge, svgEl) {
     svgEl.appendChild(p);
 
     var self = this;
-    p.onclick = function () { Event.fire(self, "edgeclick", [edge]); };
-    p.onmouseover = function () { Event.fire(self, "edgeover", [edge]); };
-    p.onmouseout = function () { Event.fire(self, "edgeout", [edge]); };
+    p.onclick = function (evt) { Event.fire(self, "edgeclick", [edge, evt]); };
+    p.onmouseover = function (evt) { Event.fire(self, "edgeover", [edge, evt]); };
+    p.onmouseout = function (evt) { Event.fire(self, "edgeout", [edge, evt]); };
 }
 BoardView.prototype.renderHex = function (hex, svgEl) {
     var g = hex.svgEl_;
@@ -275,9 +275,9 @@ BoardView.prototype.renderHex = function (hex, svgEl) {
     g.appendChild(pi);
 
     var self = this;
-    hit.onclick = function () { Event.fire(self, "hexclick", [hex]); };
-    hit.onmouseover = function () { Event.fire(self, "hexover", [hex]); };
-    hit.onmouseout = function () { Event.fire(self, "hexout", [hex]); };
+    hit.onclick = function (evt) { Event.fire(self, "hexclick", [hex, evt]); };
+    hit.onmouseover = function (evt) { Event.fire(self, "hexover", [hex, evt]); };
+    hit.onmouseout = function (evt) { Event.fire(self, "hexout", [hex, evt]); };
 
     var circ = svgEl.ownerDocument.createElementNS(this.svgns_, "circle");
     circ.setAttribute("cx", cx);
