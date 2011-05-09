@@ -265,7 +265,7 @@ BoardView.prototype.renderHex = function (hex, svgEl) {
     var hit = svgEl.ownerDocument.createElementNS(this.svgns_, "polygon");
 
     p.setAttribute("points", points);
-    hit.setAttribute("points", points);
+    hit.setAttribute("points", pointsi);
     pi.setAttribute("points", pointsi);
     //HACK: replace with better way to style
     p.setAttribute("class", "hex");
@@ -292,10 +292,8 @@ BoardView.prototype.renderHex = function (hex, svgEl) {
     if(hex.value_ == 6 || hex.value_ == 8) className += " labelemph";
     
     txt.setAttribute("class", className);
-    var xadj = -8;
-    if(hex.value_ >= 10) xadj = -15;
-    txt.setAttribute("x", (pp[0].x + pp[1].x) / 2 + xadj);
-    txt.setAttribute("y", (pp[0].y + pp[4].y) / 2 + 8);
+    txt.setAttribute("x", (pp[0].x + pp[1].x) / 2 );
+    txt.setAttribute("y", (pp[0].y + pp[4].y) / 2 );
 
     g.appendChild(txt);
     

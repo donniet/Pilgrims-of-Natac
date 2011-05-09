@@ -1,4 +1,14 @@
 
+@font-face {
+	font-family: "Goudy Bookletter 1911";
+	src: url("/static/fonts/GoudyBookletter1911.otf");
+}
+
+@font-face {
+	font-family: "Fanwood";
+	src: url("/static/fonts/Fanwood.otf");
+}
+
 body {
     margin: 0px;
     background: url(/static/i/wood_100.jpg);
@@ -27,14 +37,14 @@ body {
 .hex {
 	fill:#F5F5FF;
 	stroke: #CCCCCC;
-	stroke-width:1;
+	stroke-width:0;
 }
 .hexlabel-back {
 	fill:#F5F5FF;
 	stroke:#CCCCCC;
 }
 .hex-hitarea {
-	fill:#22FF77;
+	fill:#00FF00;
 	opacity:0;
 }
 .hex-hitarea:hover {
@@ -76,10 +86,12 @@ body {
 }
 
 .hexlabel {
-	font-family:Courier New;
+	font-family:"Fanwood", serif;
 	font-size:26px;
 	stroke:#000000;
 	fill:#000000;
+	dominant-baseline:central;
+	text-anchor:middle;
 }
 .labelemph {
 	stroke:#FF0000;
