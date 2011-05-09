@@ -8,6 +8,7 @@ from google.appengine.api import channel
 import string
 from google.appengine.ext import db
 from google.appengine.api import memcache
+from copy import copy
 
 from events import EventHook
 
@@ -240,6 +241,12 @@ class GameState(object):
     def registerUser(self, user):
         self.addUser(user)
         return channel.create_channel(self.gamekey + user.user_id())
+    def unregisterUser(self, user):
+        try:
+            self.users.remove(user)
+        except ValueError:
+            pass
+            
     def get_user_color(self, user):
         player = self.board.getPlayer(user)
         
@@ -353,13 +360,20 @@ class GameState(object):
         gp = self.board.getCurrentGamePhase()
         tp = self.board.getCurrentTurnPhase()
         
-        for user in self.users:
+        users = copy(self.users)
+        
+        for user in users:
             p = self.board.getPlayer(user)
             
             mu = message.copy()
             mu["availableActions"] = self.getUserActionsInner(user, p, c, None if gp is None else gp.phase, None if tp is None else tp.phase)
 
-            channel.send_message(self.gamekey + user.user_id(), json.dumps(mu))
+            try:
+                channel.send_message(self.gamekey + user.user_id(), json.dumps(mu))
+            except channel.InvalidChannelClientIdError:
+                # we should remove this user from the user list
+                self.unregisterUser(user)
+                
             
     def sendMessageUser(self, user, message):
         c = self.board.getCurrentPlayerColor()

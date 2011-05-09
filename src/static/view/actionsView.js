@@ -15,7 +15,11 @@ function ActionsView(actionsElement) {
 	
 }
 ActionsView.prototype.setBoardView = function(boardView) {
+	var self = this;
 	this.boardView_ = boardView;
+	Event.addListener(this.boardView_, "vertexclick", function() { self.handleVertexClick.apply(self, arguments); });
+	Event.addListener(this.boardView_, "edgeclick", function() { self.handleEdgeClick.apply(self, arguments); });
+	Event.addListener(this.boardView_, "hexclick", function() { self.handleHexClick.apply(self, arguments); });
 }
 ActionsView.prototype.setBoard = function(board) {
 	var self = this;
@@ -65,13 +69,42 @@ ActionsView.prototype.createCancelClickHandler = function() {
 ActionsView.prototype.cancelAction = function(doRender /* = true */) {
 	doRender = typeof doRender == "undefined" ? true : doRender;
 	if(this.currentAction_) {
-		Event.removeListenerById(this.boardView_, this.eventName_, this.eventHandlerId_);
+		//Event.removeListenerById(this.boardView_, this.eventName_, this.eventHandlerId_);
 		this.currentAction_ = null;
 		this.eventName_ = null;
 		this.eventHandlerId_ = null;
 	}
 	if(doRender) this.render();
 }
+
+ActionsView.prototype.handleVertexClick = function(vertex) {
+	if(this.currentAction_) {
+		this.handleCompleteAction(this.currentAction_, vertex);
+	}
+	else {
+		// here we guess what action they wanted to take
+		
+	}
+}
+ActionsView.prototype.handleEdgeClick = function(edge) {
+	if(this.currentAction_) {
+		this.handleCompleteAction(this.currentAction_, edge);
+	}
+	else {
+		// here we guess what action they wanted to take
+		
+	}
+}
+ActionsView.prototype.handleHexClick = function(hex) {
+	if(this.currentAction_) {
+		this.handleCompleteAction(this.currentAction_, hex);
+	}
+	else {
+		// here we guess what action they wanted to take
+		
+	}
+}
+
 ActionsView.prototype.handleBeginAction = function(eventName, action) {
 	this.cancelAction(false);
 	
@@ -79,7 +112,7 @@ ActionsView.prototype.handleBeginAction = function(eventName, action) {
 	this.eventName_ = eventName;
 	
 	var self = this;
-	
+	/*
 	this.eventHandlerId_ = Event.addListener(this.boardView_, this.eventName_, function(arg) {
 		var args = [action];
 		args.push(arg);
@@ -88,6 +121,7 @@ ActionsView.prototype.handleBeginAction = function(eventName, action) {
 		
 		self.handleCompleteAction.apply(self, args);
 	});
+	*/
 	this.render();
 }
 ActionsView.prototype.handleCompleteAction = function(action, data) {
