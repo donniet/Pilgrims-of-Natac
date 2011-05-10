@@ -279,23 +279,26 @@ BoardView.prototype.renderHex = function (hex, svgEl) {
     hit.onmouseover = function (evt) { Event.fire(self, "hexover", [hex, evt]); };
     hit.onmouseout = function (evt) { Event.fire(self, "hexout", [hex, evt]); };
 
-    var circ = svgEl.ownerDocument.createElementNS(this.svgns_, "circle");
-    circ.setAttribute("cx", cx);
-    circ.setAttribute("cy", cy);
-    circ.setAttribute("r", Math.abs((pp[0].x - pp[1].x) / 3.75));
-    circ.setAttribute("class", "hexlabel-back");
-    g.appendChild(circ);
-
-    var txt = svgEl.ownerDocument.createElementNS(this.svgns_, "text");
-    txt.appendChild(svgEl.ownerDocument.createTextNode(hex.value_));
-    var className = "hexlabel";
-    if(hex.value_ == 6 || hex.value_ == 8) className += " labelemph";
-    
-    txt.setAttribute("class", className);
-    txt.setAttribute("x", (pp[0].x + pp[1].x) / 2 );
-    txt.setAttribute("y", (pp[0].y + pp[4].y) / 2 );
-
-    g.appendChild(txt);
+    if(hex.value_ > 0) {
+	    
+	    var circ = svgEl.ownerDocument.createElementNS(this.svgns_, "circle");
+	    circ.setAttribute("cx", cx);
+	    circ.setAttribute("cy", cy);
+	    circ.setAttribute("r", Math.abs((pp[0].x - pp[1].x) / 3.75));
+	    circ.setAttribute("class", "hexlabel-back");
+	    g.appendChild(circ);
+	
+	    var txt = svgEl.ownerDocument.createElementNS(this.svgns_, "text");
+	    txt.appendChild(svgEl.ownerDocument.createTextNode(hex.value_));
+	    var className = "hexlabel";
+	    if(hex.value_ == 6 || hex.value_ == 8) className += " labelemph";
+	    
+	    txt.setAttribute("class", className);
+	    txt.setAttribute("x", (pp[0].x + pp[1].x) / 2 );
+	    txt.setAttribute("y", (pp[0].y + pp[4].y) / 2 );
+	
+	    g.appendChild(txt);
+    }
     
     g.appendChild(hit);
 }

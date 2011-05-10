@@ -88,9 +88,11 @@ body {
     stroke-width:1;
 }
 
+/*
 .desert + .hexlabel-back, .desert + .hexlabel-back + .hexlabel {
 	visibility:hidden;
 }
+*/
 
 .hexlabel {
 	font-family:"Fanwood", serif;
@@ -155,13 +157,6 @@ body {
 
 /* end ACTIONS */
 
-/* DICE */
-
-#diceView {
-	margin:10px;
-}
-
-/* end DICE */
 
 /* PLAYER */
 
@@ -269,18 +264,20 @@ body {
 	float:right;
 	display:block;
 	height:64px;
-	widht:64px;
+	width:64px;
 	font-size:60px;
 	text-align:center;
+	border:solid 1px #999999;
+	border-radius:10px;
 }
 
 #players .list-player-name {
-	font-size:25px;
+	font-size:20px;
 	float:left;
 	display:block;
-	width:150px;
+	width:125px;
 	overflow:hidden;
-	margin: 18px 10px 0 10px;
+	margin: 4px 10px 0 10px;
 }
 
 #pp {
@@ -288,6 +285,7 @@ body {
     width: 300px;
     right:0;
     top:32px;
+    padding-bottom:10px;
 
     background: rgba(0,0,0, 0.5);
     font-family:"Fanwood";
@@ -298,6 +296,11 @@ body {
 	clear:both;
 	color: #EEEEFF;
 	padding:10px;
+	font-size:1.2em;
+	/* border-top: solid 3px rgba(0,0,0,0.5); */
+}
+#pp h3#diceView {
+	/* border-top:none; */
 }
 
 #pp-resources {
@@ -309,7 +312,7 @@ body {
 #game-board {
     float: left;
     width: 800px;
-    //background-color: #CCC;
+    /*background-color: #CCC; */
 }
 
 #toolbar {
@@ -318,6 +321,11 @@ body {
     padding: 5px;
     color: #FFF;
     height:22px;
+    font-family:Fanwood;
+    font-size:20px;
+}
+#toolbar a {
+	color:#EEEEFF;
 }
 
 .pp-res {
@@ -353,6 +361,15 @@ body {
 
 /* end PLAYER */
 
+
+/* DICE */
+
+#diceView {
+	margin:10px;
+}
+
+/* end DICE */
+
 .popup {
     position: absolute;
     margin: 25% 25%;
@@ -373,5 +390,8 @@ body {
 
 
 #errorMessage {
+	position:relative;
+	left:25px;
 	color: #FF7777;
+	font-size: 0.8em;
 }

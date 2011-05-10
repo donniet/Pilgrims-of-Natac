@@ -242,6 +242,7 @@ class GameHandler(webapp.RequestHandler):
             'actionUrl':"action",
             'playerUrl':"currentPlayer",
             'joinUrl':"join",
+            'isStarted': (s.get_board().dateTimeStarted is not None),
         }
         
         self.response.headers.add_header("Content-Type", "application/xhtml+xml")

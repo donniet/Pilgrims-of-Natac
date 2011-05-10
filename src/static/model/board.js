@@ -110,10 +110,18 @@ Board.prototype.createChannel = function() {
 		self.handleSocketError.apply(self, arguments);
 	}
 	this.socket_.onclose = function() {
-		self.connected_ = false;
-		
-		Event.fire(self, "socketClose", []);
+		self.handleSocketClose.apply(self, arguments);
 	}
+}
+
+Board.prototype.handleSocketError = function() {
+	Event.fire(this, "error", ["There was an error connecting to the server.  Please refresh your browser window.", true]);
+}
+Board.prototype.handleSocketClose = function() {
+	self.connected_ = false;
+	
+	Event.fire(self, "socketClose", []);
+	Event.fire(this, "error", ["Communication with the server has been lost.  Please refresh your browser window.", true]);
 }
 
 Board.prototype.handleSocketMessage = function(msg) {

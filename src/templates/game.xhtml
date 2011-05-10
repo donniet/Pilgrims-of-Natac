@@ -32,18 +32,6 @@ function getCookie(name) {
 
 
 function handleLoad() {
-	var boardView = new BoardView(document.getElementById("board"), 
-	[
-   	    {type: "settlement", element:document.getElementById("settlement-model"), center:{x:15,y:15}},
-   	    {type: "city", 		 element:document.getElementById("city-model"), 	  center:{x:25,y:15}}
-   	]);
-	var actionsView = new ActionsView($("#actions"));
-	actionsView.setBoardView(boardView);
-	var errorView = new ErrorView($("#errorMessage"));
-	var playerListView = new PlayerListView($("#players"));
-	var diceView = new DiceView($("#diceView"));
-	var playerView1 = new PlayerView($("#pp"));
-	
 	var board = new Board("{{token}}", {
 		"board-json-url": "{{boardUrl}}",
 		"player-json-url": "{{playerUrl}}",
@@ -51,13 +39,32 @@ function handleLoad() {
 		"reservation-json-url": "{{reservationUrl}}"
 	});
 	
-	actionsView.setBoard(board);
+	
+	var boardView = new BoardView(document.getElementById("board"), 
+	[
+   	    {type: "settlement", element:document.getElementById("settlement-model"), center:{x:15,y:15}},
+   	    {type: "city", 		 element:document.getElementById("city-model"), 	  center:{x:25,y:15}}
+   	]);
 	boardView.setBoard(board);
-	errorView.setBoard(board);
-	playerListView.setBoard(board);
+
+	var diceView = new DiceView($("#diceView"));
 	diceView.setBoard(board);
+	
+	var playerListView = new PlayerListView($("#players"));
+	playerListView.setBoard(board);
+	
+	{% ifnotequal color None %}
+	var actionsView = new ActionsView($("#actions"));
+	actionsView.setBoard(board);
+	actionsView.setBoardView(boardView);
+	
+	var errorView = new ErrorView($("#errorMessage"));
+	errorView.setBoard(board);
+	
+	var playerView1 = new PlayerView($("#pp"));
 	playerView1.setBoard(board);
-    
+    {% endifnotequal %}
+	
 	board.load();
 			    
     $("#reserveLink").click(function() {
@@ -136,6 +143,8 @@ function handleLoad() {
 
 
 <div id="pp">
+
+     {% ifnotequal color None %}
      <h3>Resources</h3>
      <div id="pp-resources">
          <div class="pp-res">
@@ -163,9 +172,13 @@ function handleLoad() {
      <h3>Bonuses</h3>
      <div id="pp-bonuses"></div>
      
+     <h3>Developments</h3>
+     <div id="pp-developments"></div>
+     
      <h3>Actions</h3>
 	<div id="actions"></div>
 	
+	{% endifnotequal %}
 	<h3 id="diceView"></h3>
 	
 	<h3>Players</h3>
