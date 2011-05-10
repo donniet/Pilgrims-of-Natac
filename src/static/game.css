@@ -12,7 +12,7 @@
 body {
     margin: 0px;
     background: url(/static/i/wood_100.jpg);
-    font-family: Constantia, ‘Lucida Bright’, Lucidabright, ‘Lucida Serif’, Lucida, ‘DejaVu Serif’, ‘Bitstream Vera Serif’, ‘Liberation Serif’, Georgia, serif;
+    font-family: "Fanwood"
 }
 
 #context-actions {
@@ -135,33 +135,69 @@ body {
     stroke-width:1;
 }
 
+/* ACTIONS */
+
+#actions>ul {
+	margin: 0 0 0 10px;
+}
+#actions>ul>li {
+	width:25px;
+	height:40px;
+	float:left;
+	overflow:hidden;
+	margin:7px;
+}
+#actions>ul>li.action-quit { display:none; }
+
+#actions a {
+	color:#EEEEFF;
+}
+
+/* end ACTIONS */
+
+/* DICE */
+
+#diceView {
+	margin:10px;
+}
+
+/* end DICE */
+
+/* PLAYER */
+
 .player-red {
     fill:rgb(255,0,0);
+    background-color:rgb(255,0,0);
     stroke:#000000;
     stroke-width:1;
 }
 .player-green {
     fill:rgb(0,255,0);
+    background-color:rgb(0,255,0);
     stroke:#000000;
     stroke-width:1;
 }
 .player-blue {
     fill:rgb(0,0,255);
+    background-color:rgb(0,0,255);
     stroke:#000000;
     stroke-width:1;
 }
 .player-orange {
     fill:#FF9900;
+    background-color:#FF9900;
     stroke:#000000;
     stroke-width:1;
 }
 .player-white {
     fill:#CCC;
+    background-color:#CCC;
     stroke:#000000;
     stroke-width:1;
 }
 .player-brown {
     fill:#CC6600;
+    background-color:#CC6600;
     stroke:#000000;
     stroke-width:1;
 }
@@ -186,58 +222,82 @@ body {
     background: url(/static/i/30.png);
 }
 
+#current-player {
+	display:block;
+	width:290px;
+	position:absolute;
+	top:0;
+	right:0;
+	padding:3px;
+	height:16px;
+	margin-right:10px;
+	text-align:left;
+	
+}
+
+#players {
+	/*
+	position:absolute;
+	right:0;
+	bottom:10px;
+	width:280px;
+	background:rgba(0,0,0,0.5);
+	font-family:"Fanwood";
+	*/
+	font-size:18px;
+	color:#EEEEFF;
+	padding:10px;
+}
+
+#players a {
+	color:#EEEEFF;
+	text-decoration:none;
+}
+#players li {
+	padding:0 0 10px 0;
+}
+#players .list-player-resource-count, #players .list-player-bonus-count {
+	display:none;
+}
+
+#players .list-player-image {
+	clear:both;
+	float:left;
+}
+
+#players .list-player-score {
+	float:right;
+	display:block;
+	height:64px;
+	widht:64px;
+	font-size:60px;
+	text-align:center;
+}
+
+#players .list-player-name {
+	font-size:25px;
+	float:left;
+	display:block;
+	width:150px;
+	overflow:hidden;
+	margin: 18px 10px 0 10px;
+}
+
 #pp {
-    position: relative;
-    width: 300px;
-    height: 250px;
-    float: right;
-    margin: 10px;
-}
-
-#pp-bg {
     position: absolute;
-    top: 0;
-    left: 0;
     width: 300px;
-    height: 250px;
-    border: 2px solid #333;
+    right:0;
+    top:32px;
 
-    background: rgb(0,0,0);
-    opacity: 0.5;
-    -moz-border-radius: 5px;
-    border-radius: 5px;
-    
+    background: rgba(0,0,0, 0.5);
+    font-family:"Fanwood";
+    font-size:18px;
 }
 
-#player-panel2 {
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    width: 300px;
-    margin: 8px;
-    opacity: 1.0;
-    
-}
-
-#pp-grav {
-    float: left;
-    height: 40px;
-    width: 40px;
-}
-
-#pp-photo {
-    width: 36px;
-    height: 36px;
-    border: 2px solid #000;
-}
-
-#pp-name {
-    font-effect: engrave;
-    font-size: 3.2em;
-    color: #000;
-    font-variant: small-caps;
-    letter-spacing: 0.1em;
-    text-align: center;
+#pp h3 {
+	clear:both;
+	color: #EEEEFF;
+	padding:10px;
 }
 
 #pp-resources {
@@ -257,45 +317,7 @@ body {
     background-color: #000;
     padding: 5px;
     color: #FFF;
-    opacity: 0.8;
-}
-
-.popup {
-    position: absolute;
-    margin: 25% 25%;
-    top: 25%
-    left: 25%;
-    width: 50%;
-    height: 50%;
-    background-color: #FFF;
-}
-
-#footer {
-
-}
-
-.clear {
-    clear: both;
-}
-
-.player-red {
-    background-color: red;
-}
-
-.player-green {
-    background-color: green;
-}
-
-.player-yellow {
-    background-color: yellow;
-}
-
-.player-blue {
-    background-color: blue;
-}
-
-.player-white {
-    background-color: white;
+    height:22px;
 }
 
 .pp-res {
@@ -304,7 +326,9 @@ body {
     height: 75px;
     text-align: center;
     padding: 10px;
-    color: #aaa;
+    color: #EEEEFF;
+    font-family: "Fanwood";
+    font-size:1.2em;
 }
 
 .card {
@@ -327,5 +351,27 @@ body {
 }
 
 
+/* end PLAYER */
+
+.popup {
+    position: absolute;
+    margin: 25% 25%;
+    top: 25%
+    left: 25%;
+    width: 50%;
+    height: 50%;
+    background-color: #FFF;
+}
+
+#footer {
+
+}
+
+.clear {
+    clear: both;
+}
+
+
 #errorMessage {
 	color: #FF7777;
+}

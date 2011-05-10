@@ -10,11 +10,38 @@ PlayerListItemView.prototype.setPlayer = function(player) {
 	this.render();
 }
 	
-PlayerListItemView.prototype.render = function() {	
-	var span = $("<span></span>");
-	span.append(this.player_.getName());
+PlayerListItemView.prototype.render = function() {
+	span = $("<span class='list-player-image'></span>");
+	var img = $("<img/>");
+	img.attr("width", 64);
+	img.attr("height", 64);
 	
-	this.playerElement_.append(span);	
+	img.attr("src", this.player_.image_);
+	span.append(img);
+	this.playerElement_.append(span);
+	
+	span = $("<span class='list-player-name'></span>");
+	var a = $("<a/>")
+	a.attr("href", "/player?email=" + this.player_.email_);
+	a.text(this.player_.getName());
+	span.append(a);
+	this.playerElement_.append(span);
+	
+	span = $("<span/>")
+	span.addClass(this.player_.playerColor_);
+	this.playerElement_.append(span);
+	
+	span = $("<span class='list-player-resource-count'/>")
+	span.text(this.player_.resourceCount_);
+	this.playerElement_.append(span);
+
+	span = $("<span class='list-player-bonus-count'/>")
+	span.text(this.player_.bonusCount_);
+	this.playerElement_.append(span);
+	
+	span = $("<span class='list-player-score'/>")
+	span.text(this.player_.score_);
+	this.playerElement_.append(span);
 }
 
 function PlayerListView(playersElement) {
@@ -53,6 +80,7 @@ PlayerListView.prototype.render = function() {
 		var li = $("<li></li>");
 		
 		var p = players[i];
+		li.addClass("list-" + p.playerColor_);
 		
 		var pv = new PlayerListItemView(li);
 		pv.setPlayer(p);

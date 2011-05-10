@@ -44,10 +44,13 @@ ActionsView.prototype.render = function() {
 	// if there is a current action, just populate with a cancel button
 	if(this.currentAction_) {
 		var li = $("<li/>");
+		li.addClass("action-cancel");
 		var a = $("<a href='javascript:void(0)'/>");
-		li.append(a);
-		a.append("Cancel");
+		var span = $("<span/>");
+		span.text("Cancel");
 		a.click(this.createCancelClickHandler());
+		a.append(span);
+		li.append(a);
 		ul.append(li);
 	}
 	// otherwise populate with all the available actions
@@ -57,10 +60,13 @@ ActionsView.prototype.render = function() {
 		for(var i = 0; i < actions.length; i++) {
 			var action = actions[i];
 			var li = $("<li/>");
+			li.addClass("action-" + action.actionName);
 			var a = $("<a href='javascript:void(0)'/>");
-			li.append(a);
-			a.append(action.displayText);
+			var span = $("<span/>");
+			span.text(action.displayText);
 			a.click(this.createClickHandler(action));
+			a.append(span);
+			li.append(a);
 			ul.append(li);
 		}
 	}
@@ -118,19 +124,25 @@ ActionsView.prototype.renderContextActions = function(contextActions, obj, evt) 
 	for(var i = 0; i < contextActions.length; i++) {
 		var action = contextActions[i];
 		var li = $("<li/>");
+		li.addClass("action-" + action.actionName);
 		var a = $("<a href='javascript:void(0);'/>");
+		var span = $("<span/>");
 		a.click(function(action) { return function() {
 			self.handleCompleteAction(action, obj);
 			self.hideContextActions();
 		} }(action));
-		a.text(action.displayText);
+		span.text(action.displayText);
+		a.append(span);
 		li.append(a);
 		ul.append(li);
 	}
 	var li = $("<li/>");
+	li.addClass("action-cancel");
 	var a = $("<a href='javascript:void(0);'/>");
+	var span = $("<span/>");
 	a.click(function() { self.hideContextActions();	});
-	a.text("Cancel");
+	span.text("Cancel");
+	a.append(span)
 	li.append(a);
 	ul.append(li);
 	

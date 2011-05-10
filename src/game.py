@@ -209,7 +209,8 @@ class ReserveHandler(webapp.RequestHandler):
                        subject="Pilgrims of Natac Game Invitation",
                        body=template.render(bodyPath, params),
                        html=template.render(htmlPath, params))
-        
+
+     
 
 class GameHandler(webapp.RequestHandler):
     @login_required
@@ -375,7 +376,7 @@ class Application(webapp.WSGIApplication):
             (r"/gameList", GameListHandler),
             (r"/creategame", NewGameHandler),
             (r"/testModel", ModelTestHandler),
-            (r"/testResources/(.*)/", TestResourcesHandler)
+            (r"/testResources/(.*)/", TestResourcesHandler), 
         ]
         settings = dict(debug=True)
         webapp.WSGIApplication.__init__(self, handlers, **settings)

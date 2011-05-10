@@ -81,24 +81,25 @@ function handleLoad() {
 <body onload="handleLoad()">
 
     <div id="toolbar">
-        <a href="/">Back to Game List</a> | 
+        <a href="/">Back to Game List</a>
+        
+        {% if isOwner %}
+        	<input id="reserveEmail" type="text" /> <a href="javascript:void(0)" id="reserveLink">Reserve</a> <span id="reserveMessage"></span>
+        {% endif %}
+        
+        <span id="current-player">
         {% ifequal color None %}
             <a href="{{joinUrl}}"><span>Join Game</span></a>
         {% else %}
         You are: <div class="player-{{ color }}" style="width:10px; height:10px; display:inline-block;"></div> {{ nick }} 
         {% endifequal %}
-        
-        {% if isOwner %}
-        	<input id="reserveEmail" type="text" /> <a href="javascript:void(0)" id="reserveLink">Reserve</a> <span id="reserveMessage"></span>
-        {% endif %}
+        </span> 
         
         <span id="errorMessage"></span>
     </div>
 
     <div id="game-board">
 
-<div id="actions">
-</div>
 
 
 <!--
@@ -106,8 +107,6 @@ function handleLoad() {
 <?import namespace="svg" urn="http://www.w3.org/2000/svg" implementation="#AdobeSVG"?>
 -->
 
-<div id="diceView">
-</div>
 
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" width="100%" height="1024px">
     <g id="board"></g>
@@ -135,60 +134,47 @@ function handleLoad() {
 </svg>
 </div> <!-- game-board -->
 
-<div id="players">
-
-</div>
 
 <div id="pp">
-    <div id="pp-bg"></div>
-    <div id="player-panel2">
-
-        <div style="border-top:3px;border-bottom:3px;">
-            <span id="photoCell" class="smallPhoto" style="vertical-align:middle;display:table-cell;">
-              <img id="photo" src="{{imageUrl}}" alt="A picture of you"/>
-            </span><span id="pp-name" style="vertical-align:middle;display:table-cell;">Player Name</span>
-        </div>
-
-        <h3>Resources</h3>
-        <div id="pp-resources">
-            <div class="pp-res">
-                <div id="pp-res-card-sheep" class="card" title="Sheep"><div class="sheep"></div></div>
-                <div id="pp-res-sheep">0</div>
-            </div>
-            <div class="pp-res">
-                <div id="pp-res-card-wheat" class="card" title="Wheat"><div class="wheat"></div></div>
-                <div id="pp-res-wheat">0</div>
-            </div>
-            <div class="pp-res">
-                <div id="pp-res-card-wood" class="card" title="Wood"><div class="wood"></div></div>
-                <div id="pp-res-wood">0</div>
-            </div>
-            <div class="pp-res">
-                <div id="pp-res-card-rock" class="card" title="Ore"><div class="rock"></div></div>
-                <div id="pp-res-rock">0</div>
-            </div>
-            <div class="pp-res">
-                <div id="pp-res-card-clay" class="card" title="Clay"><div class="clay"></div></div>
-                <div id="pp-res-clay">0</div>
-            </div>
-        </div>
-        <h3>Bonuses</h3>
-        <div id="pp-bonuses">
-
-        </div>
-    </div>
+     <h3>Resources</h3>
+     <div id="pp-resources">
+         <div class="pp-res">
+             <div id="pp-res-card-sheep" class="card" title="Sheep"><div class="sheep"></div></div>
+             <div id="pp-res-sheep">0</div>
+         </div>
+         <div class="pp-res">
+             <div id="pp-res-card-wheat" class="card" title="Wheat"><div class="wheat"></div></div>
+             <div id="pp-res-wheat">0</div>
+         </div>
+         <div class="pp-res">
+             <div id="pp-res-card-wood" class="card" title="Wood"><div class="wood"></div></div>
+             <div id="pp-res-wood">0</div>
+         </div>
+         <div class="pp-res">
+             <div id="pp-res-card-rock" class="card" title="Ore"><div class="rock"></div></div>
+             <div id="pp-res-rock">0</div>
+         </div>
+         <div class="pp-res">
+             <div id="pp-res-card-clay" class="card" title="Clay"><div class="clay"></div></div>
+             <div id="pp-res-clay">0</div>
+         </div>
+     </div>
+     
+     <h3>Bonuses</h3>
+     <div id="pp-bonuses"></div>
+     
+     <h3>Actions</h3>
+	<div id="actions"></div>
+	
+	<h3 id="diceView"></h3>
+	
+	<h3>Players</h3>
+	<div id="players"></div>
 </div>
 
-<div id="player-panel">
-        <div id="player1"></div>
-    
-    <a href="javascript:void(0);" onclick="updatePlayer()">Update Player</a>
-</div> <!-- player-panel -->
 
-<div class="clear"></div>
-<div id="footer">
-    footer
-</div>
+
+
 </body>
 
 </html>

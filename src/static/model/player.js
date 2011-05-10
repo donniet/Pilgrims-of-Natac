@@ -4,6 +4,7 @@
 function Player(services) {
     this.score_ = 0;
     this.name_ = "";
+    this.email_ = "";
     this.image_ = null;
     this.resourceCount_ = 0;
     this.bonusCount_ = 0;
@@ -56,7 +57,10 @@ Player.prototype.loadJSON = function (json) {
 	this.playerColor_ = "player-" + json["color"];
 	this.color_ = typeof Player.nameToColorMap[this.colorName_] != "undefined" ? Player.nameToColorMap[this.colorName_] : this.colorName_;
 	this.name_ = json["user"]["nickname"];
+	this.email_ = json["user"]["email"];
 	this.image_ = json["userpicture"];
+	this.score_ = json["score"];
+	this.resourceCount_ = json["totalResources"];
 	this.resources_ = new Array();
 	for(var i = 0; json["playerResources"] && i < json["playerResources"].length; i++) {
 		var r = json["playerResources"][i];
