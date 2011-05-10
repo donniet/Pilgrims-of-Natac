@@ -43,6 +43,12 @@ indexes:
   - name: gameKey
     direction: desc
 
+- kind: Development
+  ancestor: yes
+  properties:
+  - name: color
+  - name: type
+
 - kind: Reservation
   ancestor: yes
   properties:

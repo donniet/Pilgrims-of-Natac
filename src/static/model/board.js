@@ -146,6 +146,10 @@ Board.prototype.handleSocketMessage = function(msg) {
     	this.dice_ = message["data"];
     	Event.fire(this, message["action"], [message["data"]]);
     	break;
+    case "updatePlayers":
+    	console.log("updatePlayers");
+    	this.loadPlayersJSON(message["players"]);
+    	break;    	
     case "playerJoinGame":
         throw "Message not yet implemented";
     case "playerLeaveGame":
@@ -204,27 +208,33 @@ Board.prototype.load = function() {
         self.dice_ = data.diceValues;
         
         Event.fire(self, "load", [this]);
-        Event.fire(self, "loadPlayers", [self.getPlayers()]);
         Event.fire(self, "diceRolled", [self.dice_]);
     });
     
     return responder;
 }
 
+Board.prototype.loadPlayersJSON = function(obj) {
+	this.players_ = new Array();
+
+	for(var i = 0; obj && i < obj.length; i++) {
+		var p = new Player();
+		p.loadJSON(obj[i]);
+		this.players_.push(p);
+	}
+	
+    Event.fire(this, "loadPlayers", [this.getPlayers()]);
+}
+
 Board.prototype.loadJSON = function(obj) {
     this.hex_ = new Array();
     this.edge_ = new Array();
     this.vertex_ = new Array();
-	this.players_ = new Array();
 
     var hexes = obj["hexes"];
     var hexdict = new Object();
-
-	for(var i = 0; obj["players"] && i < obj["players"].length; i++) {
-		var p = new Player();
-		p.loadJSON(obj["players"][i]);
-		this.players_.push(p);
-	}
+    
+    this.loadPlayersJSON(obj["players"]);
 
     for(var i = 0; hexes && i < hexes.length; i++) {
 		var h = new Hex(hexes[i]["x"], hexes[i]["y"], hexes[i]["type"], hexes[i]["value"]);

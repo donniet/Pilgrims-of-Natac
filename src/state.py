@@ -61,9 +61,9 @@ class BoardTemplate(object):
         ("complete", [])
     ]
     developments = [
-        {"location":"vertex", "name":"settlement", "playerStart":5, "cost":{"brick":1, "wool":1, "wheat":1, "wood":1}},
-        {"location":"vertex", "name":"city", "playerStart":4, "cost":{"ore":3, "wheat":2}},
-        {"location":"edge", "name":"road", "playerStart":15, "cost":{"brick":1, "wood":1}},
+        {"location":"vertex", "name":"settlement", "playerStart":5, "points":1, "cost":{"brick":1, "wool":1, "wheat":1, "wood":1}},
+        {"location":"vertex", "name":"city", "playerStart":4, "points":2, "cost":{"ore":3, "wheat":2}},
+        {"location":"edge", "name":"road", "playerStart":15, "points":0, "cost":{"brick":1, "wood":1}},
     ]
     dice = [6,6]
     
@@ -86,7 +86,7 @@ class BoardTemplate(object):
         board.put()
         
         for d in self.developments:
-            dt = model.DevelopmentType(parent=board, location=d["location"], name=d["name"], playerStart=d["playerStart"])
+            dt = model.DevelopmentType(parent=board, location=d["location"], name=d["name"], points=d["points"], playerStart=d["playerStart"])
             dt.put()
             for (r, a) in d["cost"].items():
                 dtc = model.DevelopmentTypeCost(parent=dt, resource=r, amount=a)
@@ -350,11 +350,14 @@ class GameState(object):
             
             self.board.addPlayer(color, user)
             self.updateStateKey()
+            self.sendMessageAll({"action":"updatePlayers", "players":players})
                 
         memcache.delete("%s-processing-join" % self.board.gameKey)
         
         return color
     def sendMessageAll(self, message):
+        logging.info("sending message to all '%s'" % message["action"])
+        
         c = self.board.getCurrentPlayerColor()
                 
         gp = self.board.getCurrentGamePhase()
@@ -369,7 +372,7 @@ class GameState(object):
             mu["availableActions"] = self.getUserActionsInner(user, p, c, None if gp is None else gp.phase, None if tp is None else tp.phase)
 
             try:
-                channel.send_message(self.gamekey + user.user_id(), json.dumps(mu))
+                channel.send_message(self.gamekey + user.user_id(), json.dumps(mu, cls=model.MessageEncoder))
             except channel.InvalidChannelClientIdError:
                 # we should remove this user from the user list
                 self.unregisterUser(user)
@@ -386,7 +389,7 @@ class GameState(object):
         mu["availableActions"] = self.getUserActionsInner(user, p, c, None if gp is None else gp.phase, None if tp is None else tp.phase)
         mu["stateKey"] = self.getStateKey()
         
-        channel.send_message(self.gamekey + user.user_id(), json.dumps(mu))
+        channel.send_message(self.gamekey + user.user_id(), json.dumps(mu, cls=model.MessageEncoder))
     
     def startGame(self, user):
         logging.info("starting game...")
@@ -467,7 +470,6 @@ class GameState(object):
         else:
             message = "Unknown action"
         
-        
         if ret and ret["success"]:
             logging.info("processing action [True]: %s %s %s" % (action, data, user))
             dataitems = []
@@ -475,8 +477,9 @@ class GameState(object):
                 dataitems = data.items()
         
             self.updateStateKey()
+            self.updateScore() 
             color = self.board.getPlayer(user).color
-            self.sendMessageAll({"action":action, "color":color,"data":data})        
+            self.sendMessageAll({"action":action, "color":color,"data":data})       
         
         memcache.delete("%s-processing-action" % self.board.gameKey)
         
@@ -485,6 +488,38 @@ class GameState(object):
         else:
             return ret
     
+    def updateScore(self):
+        ad = self.board.getAllDevelopments()
+        dts = self.board.getDevelopmentTypeMap()
+        
+        scores = dict()
+        players = self.board.getPlayers()
+        
+        for p in players:
+            scores[p.color] = 0
+        
+        for d in ad:
+            dt = dts[d.type]
+            if dt is None:
+                logging.info("ERROR: development type not found '%s'" % d.type)
+            elif scores.get(d.color, None) is None:
+                logging.info("ERROR: player color not found '%s'" % d.color)
+            else:
+                scores[d.color] += dt.points
+                
+        #TODO: other ways you can get points, aka Longest Road, Largest Army
+        
+        updated = False
+        
+        for p in players:
+            if scores[p.color] != p.score:
+                p.setScore(scores[p.color])
+                updated = True 
+        
+        if updated:
+            self.sendMessageAll({"action":"updatePlayers", "players":players})
+                
+            
     
     def getUserActionsInner(self, user, player, currentColor, gamePhase, turnPhase):
         actions = ["quit"]

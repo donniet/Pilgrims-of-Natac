@@ -239,7 +239,15 @@ class Board(db.Model):
         if dt is None:
             return ret
         
-        return dt.getCost()    
+        return dt.getCost()
+    
+    def getDevelopmentTypeMap(self):
+        ret = dict()
+        dts = db.Query(DevelopmentType).ancestor(self).fetch(1000)
+        for dt in dts:
+            ret[dt.name] = dt
+        
+        return ret 
     
     def getDevelopmentTypeMapByLocation(self, location):
         ret = dict()
@@ -252,12 +260,17 @@ class Board(db.Model):
                 ret["cost"][c.resource] = c.amount
         
         return ret
+
+    def getAllDevelopments(self):
+        return db.Query(Development).ancestor(self).order("color").order("type").fetch(1000)
+
+    def getDevelopmentsByColorAndType(self, color, type):
+        return db.Query(Development).ancestor(self).filter("color =", color).filter("type =", type).fetch(100)
         
     
     
     def dump(self, fp):
-        json.dump(self, fp, cls=BoardEncoder)   
- 
+        json.dump(self, fp, cls=BoardEncoder) 
 
 class Reservation(db.Model):
     reservationKey = db.StringProperty()
@@ -268,6 +281,7 @@ class DevelopmentType(db.Model):
     name = db.StringProperty()
     location = db.StringProperty(choices=set(["hex","edge","vertex"]))
     playerStart = db.IntegerProperty()
+    points = db.IntegerProperty()
     
     def getCost(self):
         ret = dict()
@@ -287,6 +301,10 @@ class Player(db.Model):
     user = db.UserProperty()
     score = db.IntegerProperty(default=0)
     order = db.IntegerProperty()
+    
+    def setScore(self, score):
+        self.score = score
+        self.put()
     
     # send a dict of resources, integer mappings to add to players resources
     # negative integers subtract resources
@@ -540,6 +558,26 @@ class GameListEncoder(json.JSONEncoder):
             #raise TypeError("%r is not JSON serializable" % (obj,))
             return json.JSONEncoder.default(self, obj)
 
+
+class MessageEncoder(json.JSONEncoder):
+     def default(self, obj):
+        if isinstance(obj, Player):
+            playerResources = db.Query(PlayerResources).ancestor(obj).fetch(1000)
+            
+            return dict(
+                color = obj.color,
+                user = dict(nickname=obj.user.nickname(), email=obj.user.email()),
+                # don't return all the resources with the board
+                #playerResources = db.Query(PlayerResources).ancestor(obj),
+                totalResources = len(playerResources),
+                userpicture = userPicture(obj.user.email()),
+                score = obj.score,
+                order = obj.order
+                #TODO: Serialize resources and development cards here
+            )
+        else:
+            #raise TypeError("%r is not JSON serializable" % (obj,))
+            return json.JSONEncoder.default(self, obj)
 
 class BoardEncoder(json.JSONEncoder):
     def default(self, obj):

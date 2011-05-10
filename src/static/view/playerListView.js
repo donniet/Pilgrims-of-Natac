@@ -52,14 +52,14 @@ function PlayerListView(playersElement) {
 }
 PlayerListView.prototype.setBoard = function(board) {
 	if(this.board_) {
-		Event.removeListenerById(this.board_, "load", this.loadListenerId_);
+		Event.removeListenerById(this.board_, "loadPlayers", this.loadListenerId_);
 		this.board_ = null;
 		this.loadListenerId_ = null;
 	}
 	
 	var self = this;
 	this.board_ = board;
-	this.loadListenerId_ = Event.addListener(this.board_, "load", function() {
+	this.loadListenerId_ = Event.addListener(this.board_, "loadPlayers", function() {
 		self.render();
 	});
 	
