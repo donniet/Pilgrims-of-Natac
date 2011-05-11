@@ -249,23 +249,49 @@ body {
 	text-decoration:none;
 }
 #players li {
-	padding:0 0 10px 0;
+	height:44px;
+	padding:5px 5px 5px 5px;
+}
+#players .list-player-active {
+	background-color:rgba(153,153,0,0.6);
+	border-radius:10px;
 }
 #players .list-player-resource-count, #players .list-player-bonus-count {
 	display:none;
 }
+
 
 #players .list-player-image {
 	clear:both;
 	float:left;
 }
 
+#players .list-player-red .list-player-score {
+    background-color:rgba(255,0,0,0.5);
+}
+#players .list-player-green .list-player-score {
+    background-color:rgba(0,255,0,0.5);
+}
+#players .list-player-blue .list-player-score {
+    background-color:rgba(0,0,255,0.5);
+}
+#players .list-player-orange .list-player-score {
+    background-color:rgba(255,153,0,0.5);
+}
+#players .list-player-white .list-player-score {
+    background-color:rgba(235,235,235,0.5);
+}
+#players .list-player-brown .list-player-score {
+    background-color:rgba(204,102,0,0.5);
+}
+
+
 #players .list-player-score {
 	float:right;
 	display:block;
-	height:64px;
-	width:64px;
-	font-size:60px;
+	height:44px;
+	width:44px;
+	font-size:40px;
 	text-align:center;
 	border:solid 1px #999999;
 	border-radius:10px;
@@ -275,7 +301,7 @@ body {
 	font-size:20px;
 	float:left;
 	display:block;
-	width:125px;
+	width:155px;
 	overflow:hidden;
 	margin: 4px 10px 0 10px;
 }

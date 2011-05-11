@@ -224,7 +224,7 @@ class Board(db.Model):
         return db.Query(Reservation).ancestor(self).filter("reservedFor = ", user).get()
     
     def getPlayers(self):
-        return db.Query(Player).ancestor(self).fetch(1000)
+        return db.Query(Player).ancestor(self).order("order").fetch(1000)
     
     def getPlayerColorMap(self):
         ret = dict()
@@ -301,6 +301,10 @@ class Player(db.Model):
     user = db.UserProperty()
     score = db.IntegerProperty(default=0)
     order = db.IntegerProperty()
+    
+    def getActive(self):
+        board = self.parent()
+        return board is not None and self.order == board.currentPlayerRef
     
     def setScore(self, score):
         self.score = score
@@ -541,7 +545,8 @@ class GameListEncoder(json.JSONEncoder):
                 # don't return all the resources with the board
                 #playerResources = db.Query(PlayerResources).ancestor(obj),
                 userpicture = userPicture(obj.user.email()),
-                score = obj.score
+                score = obj.score,
+                active = obj.getActive()
                 #TODO: Serialize resources and development cards here
             )
         elif isinstance(obj, db.Query):
@@ -572,7 +577,8 @@ class MessageEncoder(json.JSONEncoder):
                 totalResources = len(playerResources),
                 userpicture = userPicture(obj.user.email()),
                 score = obj.score,
-                order = obj.order
+                order = obj.order,
+                active = obj.getActive()
                 #TODO: Serialize resources and development cards here
             )
         else:
@@ -623,7 +629,8 @@ class BoardEncoder(json.JSONEncoder):
                 totalResources = len(playerResources),
                 userpicture = userPicture(obj.user.email()),
                 score = obj.score,
-                order = obj.order
+                order = obj.order,
+                active = obj.getActive()
                 #TODO: Serialize resources and development cards here
             )
         

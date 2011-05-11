@@ -13,8 +13,8 @@ PlayerListItemView.prototype.setPlayer = function(player) {
 PlayerListItemView.prototype.render = function() {
 	span = $("<span class='list-player-image'></span>");
 	var img = $("<img/>");
-	img.attr("width", 64);
-	img.attr("height", 64);
+	img.attr("width", 44);
+	img.attr("height", 44);
 	
 	img.attr("src", this.player_.image_);
 	span.append(img);
@@ -81,6 +81,7 @@ PlayerListView.prototype.render = function() {
 		
 		var p = players[i];
 		li.addClass("list-" + p.playerColor_);
+		if(p.active_) li.addClass("list-player-active");
 		
 		var pv = new PlayerListItemView(li);
 		pv.setPlayer(p);

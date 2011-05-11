@@ -516,8 +516,9 @@ class GameState(object):
                 p.setScore(scores[p.color])
                 updated = True 
         
-        if updated:
-            self.sendMessageAll({"action":"updatePlayers", "players":players})
+        #update players all the time
+        #if updated:
+        self.sendMessageAll({"action":"updatePlayers", "players":players})
                 
             
     

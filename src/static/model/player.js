@@ -62,6 +62,7 @@ Player.prototype.loadJSON = function (json) {
 	this.score_ = json["score"];
 	this.resourceCount_ = json["totalResources"];
 	this.resources_ = new Array();
+	this.active_ = json["active"];
 	for(var i = 0; json["playerResources"] && i < json["playerResources"].length; i++) {
 		var r = json["playerResources"][i];
 		this.resources_.push({
