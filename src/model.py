@@ -112,6 +112,7 @@ class Board(db.Model):
     playOrder = db.ListProperty(int)
     winner = db.UserProperty()
     minimumPlayers = db.IntegerProperty()
+    pointsNeededToWin = db.IntegerProperty()
     resourceMap = None
     
     def save(self, callback):
@@ -132,7 +133,19 @@ class Board(db.Model):
             return None
         else:
             return self.getGamePhase(self.gamePhase)
+
+    def setWinner(self, user):
+        self.winner = user
+        self.dateTimeEnded = datetime.datetime.now()
         
+        #INFO: the greatest game phase must be the complete phase
+        gp = self.getGamePhases()
+        if len(gp) > 0:
+            complete = gp[len(gp)-1]
+            self.gamePhase = complete.order
+        
+        self.put()
+    
     def getResourceByHexType(self, hexType):
         if self.resourceMap is None:
             self.resourceMap = dict()

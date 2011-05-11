@@ -49,6 +49,16 @@ indexes:
   - name: color
   - name: type
 
+- kind: GamePhase
+  ancestor: yes
+  properties:
+  - name: order
+
+- kind: Player
+  ancestor: yes
+  properties:
+  - name: order
+
 - kind: Reservation
   ancestor: yes
   properties:

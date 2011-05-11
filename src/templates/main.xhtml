@@ -38,7 +38,7 @@ $(document).ready(function() {
 	//gl.addColumn(startedCol);
 	//gl.addColumn(new Column("this.data.dateTimeEnded").setHeading("Ended").setSortable(true).setSortField("dateTimeEnded").setDisplayBinding("this.data.dateTimeEnded ? Date.parseISO(this.data.dateTimeEnded).format() : 'ongoing'"));
 	gl.addColumn(new PlayerListColumn(function(row) { return row.data.players; }).setHeading("Players"));
-	gl.addColumn(new PlayerColumn(function(row) { return row.data.winner; }).setHeading("Winner").setSortable(true).setSortField("winner"));
+	gl.addColumn(new PlayerColumn(function(row) { return row.data.winner; }, "/player?email={email}").setHeading("Winner").setSortable(true).setSortField("winner"));
 	gl.addColumn(new ActionsColumn(function(row) { return row.data.players; }, function(row){return '/game/'+row.data.gameKey+'/join';}, function(row){return '/game/'+row.data.gameKey+'/';}).setHeading("Actions"));
 	//gl.sortResults(2, GameListing.SortDir.Descending);
 	//gl.addFilter("owner", "{{email}}");

@@ -52,6 +52,8 @@ class BoardTemplate(object):
     hexProduces = ["mountains", "hills", "pasture", "fields", "forest"]
     colors = ["red", "blue", "green", "orange", "white", "brown"]
     minimumPlayers = 2
+    #set to 5 for testing
+    pointsNeededToWin = 5
     
     gamePhases = [
         ("joining", []), 
@@ -82,6 +84,7 @@ class BoardTemplate(object):
         board.gamePhase = 0
         board.minimumPlayers = self.minimumPlayers
         board.dice = self.dice
+        board.pointsNeededToWin = self.pointsNeededToWin
         
         board.put()
         
@@ -515,6 +518,9 @@ class GameState(object):
             if scores[p.color] != p.score:
                 p.setScore(scores[p.color])
                 updated = True 
+            if scores[p.color] >= self.board.pointsNeededToWin:
+                #somebody just won the game
+                self.board.setWinner(p.user)
         
         #update players all the time
         #if updated:
