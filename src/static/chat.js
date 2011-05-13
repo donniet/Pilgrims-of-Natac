@@ -2,7 +2,30 @@
 
 function ChatView(element) {
 	this.el_ = element;
+	this.chatEl_ = null;
+	this.input_ = null;
+	this.submit_ = null;
 	this.board_ = null;
+	
+	this.render();
+}
+ChatView.prototype.render = function() {
+	this.chatEl_ = $("<div/>");
+	this.el_.append(this.chatEl_);
+	var self = this;
+	
+	this.input_ = $("<input type='text'/>");
+	this.input_.bind('keypress', function(e){ self.handleKeypress(e); })
+	this.el_.append(this.input_);
+
+}
+ChatView.prototype.handleKeypress = function(e) {
+	var code = (e.keyCode ? e.keyCode : e.which);
+	if(code == 13) {
+		var msg = this.input_.val();
+		this.board_.sendAction("chat", msg);
+		this.input_.val('');
+	}
 }
 ChatView.prototype.setBoard = function(board) {
 	this.board_ = board;
@@ -22,12 +45,16 @@ ChatView.prototype.handleLoad = function() {
 	}
 }
 ChatView.prototype.handler = function(message, type) {
+	console.log("chat handler: " + message);
 	m = $("<p/>");
 	m.addClass("player-" + message["color"]);
 	m.addClass("message-type-" + type);
-	m.text(message["message"]);
+	if(message["data"])
+		m.text(message["data"]);
+	else
+		m.text(message["message"]);
 	
-	this.el_.append(m);
-	this.el_.scrollTop(this.el_[0].scrollHeight);
+	this.chatEl_.append(m);
+	this.chatEl_.scrollTop(this.el_[0].scrollHeight);
 }
 

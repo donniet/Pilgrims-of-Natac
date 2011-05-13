@@ -54,6 +54,12 @@ indexes:
   properties:
   - name: order
 
+- kind: LogEntry
+  ancestor: yes
+  properties:
+  - name: dateTime
+    direction: desc
+
 - kind: Player
   ancestor: yes
   properties:

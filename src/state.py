@@ -491,17 +491,18 @@ class GameState(object):
             logmessage = "ended turn"
         elif action == "chat":
             self.board.log("chat", data, user)
-            self.sendMessageAll({"action":"chat", "color":color,"message":data})
-            return ActionResponse(True)
+            color = self.board.getPlayer(user).color
+            self.sendMessageAll({"action":"chat", "color":color,"message":data});
+            ret = ActionResponse(True)
         else:
             message = "Unknown action"
             logmessage = "unknown action '%s'" % action
         
-        if ret and ret["success"]:
+        if ret and ret["success"] and action != "chat":
             logging.info("processing action [True]: %s %s %s" % (action, data, user))
-            dataitems = []
-            if data is not None and data.items() is not None:
-                dataitems = data.items()
+            #dataitems = []
+            #if data is not None and data.items() is not None:
+            #    dataitems = data.items()
         
             self.updateStateKey()
             self.updateScore() 

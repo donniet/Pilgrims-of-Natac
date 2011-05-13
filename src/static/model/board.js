@@ -75,15 +75,19 @@ Board.prototype.getDice = function() { return this.dice_; }
 Board.prototype.getAvailableActions = function() { return this.availableActions_; };
 Board.prototype.getCurrentPlayer = function() { return this.player_; }
 
-Board.prototype.sendAction = function(action, data) {
+Board.prototype.sendAction = function(action, data) {	
 	var responder = new Object();
+	
+	var actionName = action;
+	if(typeof action != "string")
+		actionName = action.actionName;
 	
 	var dat = null;
 	var self = this;
 	
 	if(data && typeof data.toJSON == "function") { dat = data.toJSON(); }
 	
-	jQuery.postJSON(this.actionUrl_, {action:action.actionName, data:dat}, function(ret) {
+	jQuery.postJSON(this.actionUrl_, {action:actionName, data:dat}, function(ret) {
 		// action responses are always success, message pairs
 		if(ret && ret.success) 
 			Event.fire(responder, "load", arguments);
@@ -279,7 +283,6 @@ Board.prototype.loadJSON = function(obj) {
 		this.addVertex(v);
     }
     var log = obj["log"];
-    console.log("log: " + log);
     for(var i = 0; log && i < log.length; i++) {
     	this.log_.push(log[i]);
     }
