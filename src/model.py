@@ -94,6 +94,19 @@ class GamePhase(db.Model):
     def getTurnPhaseByName(self, phase):
         return db.Query(TurnPhase).ancestor(self).filter("phase =", phase).get()
 
+class LogEntry(db.Model):
+    dateTime = db.DateTimeProperty(auto_now=True)
+    type = db.StringProperty()
+    message = db.StringProperty()
+    actor = db.UserProperty()
+    
+    def getActorColor(self):
+        board = self.parent()
+        player = board.getPlayer(self.actor)
+        if player is not None:
+            return player.color
+        else:
+            return None
 
 class Board(db.Model):
     dateTimeCreated = db.DateTimeProperty()
@@ -114,6 +127,13 @@ class Board(db.Model):
     minimumPlayers = db.IntegerProperty()
     pointsNeededToWin = db.IntegerProperty()
     resourceMap = None
+    
+    def log(self, type, message, actor=None):
+        entry = LogEntry(parent=self, type=type, message=message, actor=actor)
+        entry.put();
+        
+    def getLogEntries(self, limit, offset):
+        return db.Query(LogEntry).ancestor(self).order("-dateTime").fetch(limit, offset)
     
     def save(self, callback):
         rpc = db.create_rpc(deadline=5, callback=callback)
@@ -314,6 +334,7 @@ class Player(db.Model):
     user = db.UserProperty()
     score = db.IntegerProperty(default=0)
     order = db.IntegerProperty()
+    connected = False
     
     def getActive(self):
         board = self.parent()
@@ -591,7 +612,8 @@ class MessageEncoder(json.JSONEncoder):
                 userpicture = userPicture(obj.user.email()),
                 score = obj.score,
                 order = obj.order,
-                active = obj.getActive()
+                active = obj.getActive(),
+                connected = obj.connected,
                 #TODO: Serialize resources and development cards here
             )
         else:
@@ -619,6 +641,15 @@ class BoardEncoder(json.JSONEncoder):
                 diceValues = obj.diceValues,
                 dice = obj.dice,
                 developmentTypes=db.Query(DevelopmentType).ancestor(obj),
+                log=obj.getLogEntries(20,0)
+            )
+        elif isinstance(obj, LogEntry):
+            return dict(
+                dateTime = obj.dateTime,
+                type = obj.type,
+                message = obj.message,
+                actor = obj.actor,
+                color = obj.getActorColor()
             )
         elif isinstance(obj, DevelopmentType):
             return dict(

@@ -66,6 +66,7 @@ function Board(token, services) {
     this.vertex_ = new Array();
     this.dice_ = new Array();
     this.availableActions_ = new Array();
+    this.log_ = new Array();
     
     this.player_ = new Player(services);
 }
@@ -168,6 +169,12 @@ Board.prototype.handleSocketMessage = function(msg) {
         throw "Message not yet implemented";
     case "playerStartNormalTurn":
         throw "Message not yet implemented";
+    case "log":
+    	Event.fire(this, "log", [message]);
+    	break;
+    case "chat":
+    	Event.fire(this, "chat", [message]);
+    	break;
     }
     
     this.availableActions_ = new Array();
@@ -230,6 +237,7 @@ Board.prototype.loadJSON = function(obj) {
     this.hex_ = new Array();
     this.edge_ = new Array();
     this.vertex_ = new Array();
+    this.log_ = new Array();
 
     var hexes = obj["hexes"];
     var hexdict = new Object();
@@ -270,8 +278,14 @@ Board.prototype.loadJSON = function(obj) {
 		}
 		this.addVertex(v);
     }
+    var log = obj["log"];
+    console.log("log: " + log);
+    for(var i = 0; log && i < log.length; i++) {
+    	this.log_.push(log[i]);
+    }
     this.createAdjecencyMap()
 }
+Board.prototype.getLog = function() { return this.log_; }
 Board.prototype.setModelElement = function (modelName, svgEl, centerPosition) {
     this.modelElements_[modelName] = {
         "svgElement": svgEl,

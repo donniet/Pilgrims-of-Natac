@@ -157,6 +157,31 @@ body {
 
 /* end ACTIONS */
 
+/* CHAT */
+
+#chat {
+	width:100%;
+	position:absolute;
+	bottom:0;
+	left:0;
+	height:250px;
+	background-color:rgba(0,0,0,0.5);
+	overflow:scroll;
+	font-family:"Fanwood";
+	font-size:16px;
+}
+
+#chat .player-brown {
+	color:#CC6600;
+	background-color:transparent;
+}
+#chat .player-blue {
+	color:#0000FF;
+	background-color:transparent;
+}
+
+/* end CHAT */
+
 
 /* PLAYER */
 
@@ -259,7 +284,6 @@ body {
 #players .list-player-resource-count, #players .list-player-bonus-count {
 	display:none;
 }
-
 
 #players .list-player-image {
 	clear:both;

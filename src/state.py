@@ -244,6 +244,12 @@ class GameState(object):
     def registerUser(self, user):
         self.addUser(user)
         return channel.create_channel(self.gamekey + user.user_id())
+    def isUserRegistered(self, user):
+        for u in self.users:
+            if u == user:
+                return True
+            
+        return False
     def unregisterUser(self, user):
         try:
             self.users.remove(user)
@@ -353,11 +359,18 @@ class GameState(object):
             
             self.board.addPlayer(color, user)
             self.updateStateKey()
-            self.sendMessageAll({"action":"updatePlayers", "players":players})
+            self.sendPlayerUpdate()
                 
         memcache.delete("%s-processing-join" % self.board.gameKey)
         
         return color
+    def sendPlayerUpdate(self):
+        players = self.board.getPlayers()
+        for p in players:
+            p.connected = self.isUserRegistered(p.user)
+            
+        self.sendMessageAll({"action":"updatePlayers", "players":players})
+    
     def sendMessageAll(self, message):
         logging.info("sending message to all '%s'" % message["action"])
         
@@ -373,6 +386,7 @@ class GameState(object):
             
             mu = message.copy()
             mu["availableActions"] = self.getUserActionsInner(user, p, c, None if gp is None else gp.phase, None if tp is None else tp.phase)
+            mu["stateKey"] = self.getStateKey()
 
             try:
                 channel.send_message(self.gamekey + user.user_id(), json.dumps(mu, cls=model.MessageEncoder))
@@ -453,25 +467,35 @@ class GameState(object):
         memcache.set("%s-processing-action" % self.board.gameKey, True, 60)
         ret = False
         message = None
+        logmessage = ""
         
         logging.info("processing action: %s %s %s" % (action, data, user))
         
-        if action == "reset":
-            ret = self.resetBoardAction()
-        elif action == "placeSettlement":
+        if action == "placeSettlement":
             ret = self.placeSettlement(data["x"], data["y"], user)
+            logmessage = "placed settlement (%d,%d)" % (data["x"], data["y"])
         elif action == "placeCity":
             ret = self.placeCity(data["x"], data["y"], user)
+            logmessage = "placed city (%d,%d)" % (data["x"], data["y"])
         elif action == "placeRoad":
             ret = self.placeRoad(user, data["x1"], data["y1"], data["x2"], data["y2"])
+            logmessage = "placed road from (%d,%d) to (%d,%d)" % (data["x1"], data["y1"], data["x2"], data["y2"])
         elif action == "startGame":
             ret = self.startGame(user)
+            logmessage = "started game"
         elif action == "rollDice":
             ret = self.rollDice(user)
+            logmessage = "rolled dice"
         elif action == "endTurn":
             ret = self.endTurn(user)
+            logmessage = "ended turn"
+        elif action == "chat":
+            self.board.log("chat", data, user)
+            self.sendMessageAll({"action":"chat", "color":color,"message":data})
+            return ActionResponse(True)
         else:
             message = "Unknown action"
+            logmessage = "unknown action '%s'" % action
         
         if ret and ret["success"]:
             logging.info("processing action [True]: %s %s %s" % (action, data, user))
@@ -482,7 +506,9 @@ class GameState(object):
             self.updateStateKey()
             self.updateScore() 
             color = self.board.getPlayer(user).color
-            self.sendMessageAll({"action":action, "color":color,"data":data})       
+            self.sendMessageAll({"action":action, "color":color,"data":data})
+            self.board.log("action", logmessage, user)
+            self.sendMessageAll({"action":"log", "color":color,"message":logmessage});       
         
         memcache.delete("%s-processing-action" % self.board.gameKey)
         
@@ -524,7 +550,7 @@ class GameState(object):
         
         #update players all the time
         #if updated:
-        self.sendMessageAll({"action":"updatePlayers", "players":players})
+        self.sendPlayerUpdate()
                 
             
     

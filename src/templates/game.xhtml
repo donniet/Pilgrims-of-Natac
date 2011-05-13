@@ -23,6 +23,7 @@
 <script type="text/javascript" src="/static/view/playerListView.js"></script>
 <script type="text/javascript" src="/static/view/errorView.js"></script>
 <script type="text/javascript" src="/static/view/playerView.js"></script>
+<script type="text/javascript" src="/static/chat.js"></script>
 <script type="text/javascript">//<![CDATA[
 
 function getCookie(name) {
@@ -52,6 +53,9 @@ function handleLoad() {
 	
 	var playerListView = new PlayerListView($("#players"));
 	playerListView.setBoard(board);
+	
+	var chatview = new ChatView($("#chat"));
+	chatview.setBoard(board);
 	
 	{% ifnotequal color None %}
 	var actionsView = new ActionsView($("#actions"));
@@ -185,7 +189,8 @@ function handleLoad() {
 	<div id="players"></div>
 </div>
 
-
+<div id="chat">
+</div>
 
 
 </body>
