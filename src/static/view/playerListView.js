@@ -74,7 +74,7 @@ PlayerListView.prototype.render = function() {
 	this.playerListItemViews_ = new Array();
 	
 	var players = this.board_.getPlayers();
-	console.log("player count: " + players.length);
+	//console.log("player count: " + players.length);
 	
 	for(var i = 0; i < players.length; i++) {
 		var li = $("<li></li>");

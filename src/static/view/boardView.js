@@ -337,13 +337,13 @@ BoardView.prototype.highlightBuildableVertex = function(player) {
 			buildable = false;
 
 		if(buildable) {
-			console.log("buildabl!" + v.svgEl_.firstChild.getAttribute("class"));
+			//console.log("buildabl!" + v.svgEl_.firstChild.getAttribute("class"));
 			var el = null;
 			for(el = v.svgEl_.firstChild; el && !/\bvertex\b/.test(el.getAttribute("class")); el = el.nextSibling) {};
 
 			if(el) {
 				this._highlight(el);
-				console.log("found one!");
+				//console.log("found one!");
 			}
 		}
 	}
@@ -386,7 +386,7 @@ BoardView.prototype.highlightBuildableEdge = function(player) {
 
 			if(el) {
 				this._highlight(el);
-				console.log("found a road!");
+				//console.log("found a road!");
 			}
 		}
 		

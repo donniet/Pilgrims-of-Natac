@@ -15,6 +15,19 @@ body {
     font-family: "Fanwood"
 }
 
+/* TRADE */
+
+#trade {
+	position:absolute;
+	left:0;
+	top:22px;
+	width:300px;
+	height:100%;
+	background-color: rgba(0,0,0,0.5);
+}
+
+/* end TRADE */
+
 #context-actions {
 	font-family: Verdana, Arial, Sans-Serif;
 	font-size: 12px;
@@ -108,27 +121,30 @@ body {
 }
 
 .edge {
-    fill:rgb(0,0,0);
+    fill:rgb(0,255,0);
     opacity:0;
-    stroke:rgb(0,0,0);
+    stroke:rgb(0,255,0);
     stroke-width:1;
 }
 
 .edge:hover {
-    fill:rgb(0,255,0);
     opacity:0.5;
-    stroke:#00ff00;
-    stroke-width:1;
 }
 .vertex {
-    fill:rgb(0,0,0);
-    opacity:0;
-}
-.vertex:hover {
     fill:rgb(0,255,0);
-    opacity:0.5;
+    opacity:0;
     stroke:#00ff00;
     stroke-width:1;
+}
+.vertex:hover {
+    opacity:0.5;
+}
+.vertex, .edge, .hex-hitarea {
+	-webkit-transition: all 0.2s ease-in-out;
+	-moz-transition: all 0.2s ease-in-out;
+	-o-transition: all 0.2s ease-in-out;
+	-ms-transition: all 0.2s ease-in-out;
+	transition: all 0.2s ease-in-out;
 }
 
 .highlighted {
@@ -168,15 +184,38 @@ body {
 	background-color:rgba(0,0,0,0.5);
 }
 
-#chat>div {
+#chat>div.chat-window {
 	position:absolute;
 	top:0;
 	left:0;
-	height:220px;
+	height:100%;
+	padding-bottom:25px;
 	width:100%;
-	overflow:scroll;
+	overflow:auto;
 	font-family:"Fanwood";
 	font-size:16px;
+}
+div.size-bar {
+	/*background-color: rgba(0,0,0,0.5); */
+	padding:0;
+	margin:0;
+	overflow:inherit;
+}
+div.size-bar-attach-left {
+	cursor: w-resize;
+	border-right: solid 1px black;
+}
+div.size-bar-attach-right {
+	cursor: e-resize;
+	border-left: solid 1px black;
+}
+div.size-bar-attach-top {
+	cursor: s-resize;
+	border-bottom: solid 1px black; 
+}
+div.size-bar-attach-bottom {
+	cursor: n-resize;
+	border-top: solid 1px black;
 }
 #chat>input[type=text] {
 	position:absolute;

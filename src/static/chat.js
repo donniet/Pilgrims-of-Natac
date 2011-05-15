@@ -10,7 +10,7 @@ function ChatView(element) {
 	this.render();
 }
 ChatView.prototype.render = function() {
-	this.chatEl_ = $("<div/>");
+	this.chatEl_ = $("<div class='chat-window'/>");
 	this.el_.append(this.chatEl_);
 	var self = this;
 	
@@ -38,14 +38,14 @@ ChatView.prototype.setBoard = function(board) {
 }
 ChatView.prototype.handleLoad = function() {	
 	var log = this.board_.getLog();
-	console.log("log length: " + log.length)
+	//console.log("log length: " + log.length)
 	for(var i = log.length - 1; i >= 0; i--) {
 		l = log[i];
 		this.handler(l, l.type);
 	}
 }
 ChatView.prototype.handler = function(message, type) {
-	console.log("chat handler: " + message);
+	//console.log("chat handler: " + message);
 	m = $("<p/>");
 	m.addClass("player-" + message["color"]);
 	m.addClass("message-type-" + type);

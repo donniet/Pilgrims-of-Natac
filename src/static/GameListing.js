@@ -68,7 +68,7 @@ function evalScope(str, obj) {
 	var o = new Evalable();
 	for(var k in obj) {
 		o[k] = obj[k];
-		console.log(obj[k]);
+		//console.log(obj[k]);
 	}
 	
 	return o.eval(str);
@@ -335,7 +335,7 @@ function GameListingService(url) {
 GameListingService.prototype.queryBoards = function(offset, limit, sorts, filters) {
 	var sort = "";
 	for(var i = 0; sorts && i < sorts.length; i++) {
-		console.log("sorts");
+		//console.log("sorts");
 		var s = sorts[i];
 		if(s.desc) sort += "-" + s.field;
 		else sort += s.field;
@@ -344,7 +344,7 @@ GameListingService.prototype.queryBoards = function(offset, limit, sorts, filter
 	}
 	var filter = "";
 	for(var i = 0; filters && i < filters.length; i++) {
-		console.log("filters");
+		//console.log("filters");
 		var f = filters[i];
 		//TODO: json encode value
 		filter += f.field + (f.op ? f.op : "=") + f.value;

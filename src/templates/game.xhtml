@@ -31,6 +31,182 @@ function getCookie(name) {
     return r ? r[1] : undefined;
 }
 
+function Layout() {
+	this.layoutItems_ = new Array();
+	this.grabSize_ = 10;
+	this.handle_ = null;
+	
+	var self = this;
+	$(window).resize(function() { self.handleResize(); });
+	$(document).ready(function() { self.handleResize(); });
+	
+	$(window).mousemove(function(evt) {self.handleSizeMouseMove(evt);});
+}
+Layout.prototype.addItem = function(element, attach, dimension, sizeable) {
+	var self = this;
+	var item = {element: element, attach: attach, dimension: dimension, sizeEl: sizeEl};
+	
+	var sizeEl = null;
+	if(sizeable) {
+		sizeEl = $("<div class='size-bar'/>");
+		sizeEl.addClass("size-bar-attach-" + attach);
+		sizeEl.css("position", "absolute");
+		if(attach == "left") {
+			sizeEl.css("width", this.grabSize_);
+			sizeEl.css("top", 0);
+			sizeEl.css("right", 0);
+			sizeEl.css("height", "100%");
+		}
+		else if(attach == "right") {
+			sizeEl.css("width", this.grabSize_);
+			sizeEl.css("top", 0);
+			sizeEl.css("left", 0);
+			sizeEl.css("height", "100%");
+		}
+		else if(attach == "top") {
+			sizeEl.css("height", this.grabSize_);
+			sizeEl.css("left", 0);
+			sizeEl.css("bottom", 0);
+			sizeEl.css("width", "100%");
+		}
+		else if(attach == "bottom") {
+			sizeEl.css("height", this.grabSize_);
+			sizeEl.css("left", 0);
+			sizeEl.css("top", 0);
+			sizeEl.css("width", "100%");
+		}
+		
+		element.append(sizeEl);
+		
+		sizeEl.mousedown(function(evt) {self.handleSizeMouseDown(evt, item); return false;});
+		sizeEl.mouseup(function(evt) {self.handleSizeMouseUp(evt, item);});
+		sizeEl.mousemove(function(evt) {self.handleSizeMouseMove(evt, item);});
+	}
+	this.layoutItems_.push(item);
+}
+Layout.prototype.handleSizeMouseDown = function(evt, item) {
+	this.handle_ = {x:evt.clientX, y:evt.clientY, item:item};
+	return false;
+}
+Layout.prototype.handleSizeMouseUp = function(evt, item) {
+	this.handle_ = null;
+}
+Layout.prototype.handleSizeMouseMove = function(evt) {
+	if(this.handle_) {
+		var item = this.handle_.item;
+		
+		if(item.attach == "left") {
+			var dx = evt.clientX - this.handle_.x;
+			item.dimension += dx;
+			this.handle_.x = evt.clientX;
+		}
+		else if(item.attach == "right") {
+			var dx = evt.clientX - this.handle_.x;
+			item.dimension -= dx;
+			this.handle_.x = evt.clientX;
+		}
+		else if(item.attach == "bottom") {
+			var dy = this.handle_.y - evt.clientY;
+			item.dimension += dy;
+			this.handle_.y = evt.clientY;
+		}
+		else if(item.attach == "top") {
+			var dy = this.handle_.y - evt.clientY;
+			item.dimension -= dy;
+			this.handle_.y = evt.clientY;			
+		}
+		this.handleResize();
+	}
+}
+Layout.prototype.handleResize = function() {
+	var m = {
+		"top":0,
+		"right":0,
+		"bottom":0,
+		"left":0
+	};
+	for(var i = 0; i < this.layoutItems_.length; i++) {
+		var li = this.layoutItems_[i];
+		this.layout(li.element, li.attach, li.dimension, li.sizeEl, m);
+	} 
+}
+Layout.prototype.layout = function(element, attach, dimension, sizeEl, margin) {
+	var width = $(window).width();
+	var height = $(window).height();
+	
+	$(element).css("position", "absolute");
+	$(element).css("display", "block");
+	
+	switch(attach) {
+	case "top":
+		if(sizeEl) {
+			$(sizeEl).css("bottom",0);
+			$(sizeEl).css("left", 0);
+			$(sizeEl).css("width", "100%");
+			$(sizeEl).css("height", this.grabSize_ + "px");
+		}
+		$(element).css("top", margin["top"] + "px");
+		$(element).css("left", margin["left"] + "px");
+		$(element).css("width", (width - margin["left"] - margin["right"]) + "px");
+		$(element).css("height", dimension + "px");
+		margin["top"] += dimension;
+		break;
+	case "right": 
+		if(sizeEl) {
+			$(sizeEl).css("top",0);
+			$(sizeEl).css("right", 0);
+			$(sizeEl).css("height", "100%");
+			$(sizeEl).css("width", this.grabSize_ + "px");
+		}
+		$(element).css("top", margin["top"] + "px");
+		$(element).css("right", margin["right"] + "px");
+		$(element).css("width", dimension + "px");
+		$(element).css("height", (height - margin["top"] - margin["bottom"]) + "px");
+		margin["right"] += dimension;
+		break;
+	case "bottom":
+		if(sizeEl) {
+			$(sizeEl).css("top",0);
+			$(sizeEl).css("left", 0);
+			$(sizeEl).css("width", "100%");
+			$(sizeEl).css("height", this.grabSize_ + "px");
+		} 
+		$(element).css("bottom", margin["bottom"] + "px");
+		$(element).css("left", margin["left"] + "px");
+		$(element).css("width", (width - margin["left"] - margin["right"]) + "px");
+		$(element).css("height", dimension + "px");
+		margin["bottom"] += dimension;
+		break;
+	case "left":  
+		if(sizeEl) {
+			$(sizeEl).css("top",0);
+			$(sizeEl).css("left", 0);
+			$(sizeEl).css("height", "100%");
+			$(sizeEl).css("width", this.grabSize_ + "px");
+		} 
+		$(element).css("top", margin["top"] + "px");
+		$(element).css("left", margin["left"] + "px");
+		$(element).css("width", dimension + "px");
+		$(element).css("height", (height - margin["top"] - margin["bottom"]) + "px");
+		margin["left"] += dimension;
+		break;
+	case "center":
+		if(element.nodeName && element.nodeName == "svg") {
+			element.setAttribute("width", (width - margin["left"] - margin["right"]) + "px");
+			element.setAttribute("height", (height - margin["top"] - margin["bottom"]) + "px");
+			$(element).css("top", margin["top"] + "px");
+			$(element).css("left", margin["left"] + "px");
+		}
+		else {
+			$(element).css("top", margin["top"] + "px");
+			$(element).css("left", margin["left"] + "px");
+			$(element).css("width", (width - margin["left"] - margin["right"]) + "px");
+			$(element).css("height", (height - margin["top"] - margin["bottom"]) + "px");
+		}
+		break;
+	}	
+}
+
 
 function handleLoad() {
 	var board = new Board("{{token}}", {
@@ -40,6 +216,7 @@ function handleLoad() {
 		"reservation-json-url": "{{reservationUrl}}"
 	});
 	
+	var layout = new Layout();
 	
 	var boardView = new BoardView(document.getElementById("board"), 
 	[
@@ -47,13 +224,14 @@ function handleLoad() {
    	    {type: "city", 		 element:document.getElementById("city-model"), 	  center:{x:25,y:15}}
    	]);
 	boardView.setBoard(board);
+	
 
 	var diceView = new DiceView($("#diceView"));
 	diceView.setBoard(board);
 	
 	var playerListView = new PlayerListView($("#players"));
 	playerListView.setBoard(board);
-	
+
 	var chatview = new ChatView($("#chat"));
 	chatview.setBoard(board);
 	
@@ -67,6 +245,15 @@ function handleLoad() {
 	
 	var playerView1 = new PlayerView($("#pp"));
 	playerView1.setBoard(board);
+	
+	layout.addItem($("#toolbar"), "top", 30);
+	layout.addItem($("#trade"), "left", 100, true);
+	layout.addItem($("#pp"), "right", 350, true);
+	layout.addItem($("#chat"), "bottom", 200, true);
+	
+	
+	layout.addItem(document.getElementById("game-board"), "center");
+	
     {% endifnotequal %}
 	
 	board.load();
@@ -84,12 +271,12 @@ function handleLoad() {
 }
 
 
-
+$(document).ready(handleLoad);
 
 //]]></script>
 </head>
 
-<body onload="handleLoad()">
+<body>
 
     <div id="toolbar">
         <a href="/">Back to Game List</a>
@@ -119,7 +306,7 @@ function handleLoad() {
 -->
 
 
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" width="100%" height="1024px">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" width="100%" height="1024px" id="svg">
     <g id="board"></g>
     <g id="prototypes" style="visibility:hidden;">
         <svg id="settlement-model" y="331.41016151377545" x="635">
@@ -192,6 +379,8 @@ function handleLoad() {
 <div id="chat">
 </div>
 
+<div id="trade">
+</div>
 
 </body>
 

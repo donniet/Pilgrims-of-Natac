@@ -152,7 +152,7 @@ Board.prototype.handleSocketMessage = function(msg) {
     	Event.fire(this, message["action"], [message["data"]]);
     	break;
     case "updatePlayers":
-    	console.log("updatePlayers");
+    	//console.log("updatePlayers");
     	this.loadPlayersJSON(message["players"]);
     	break;    	
     case "playerJoinGame":

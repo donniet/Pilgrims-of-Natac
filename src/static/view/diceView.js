@@ -5,12 +5,12 @@ function DiceView(diceElement) {
 	this.diceRolledListenerId_ = null;
 	var self = this;
 	Event.addListener(this.controller_, "diceRolled", function(diceValues) {
-		console.log("handling dice roll: " + diceValues.length);
+		//console.log("handling dice roll: " + diceValues.length);
 		self.diceValues_ = diceValues;
 		self.RenderDice();
 	});
 	Event.addListener(this.controller_, "loadBoard", function() {
-		console.log("handling board load...");
+		//console.log("handling board load...");
 		self.diceValues_ = self.controller_.dice_;
 		self.RenderDice();
 	});
@@ -34,9 +34,9 @@ DiceView.prototype.render = function() {
 	
 	for(var i = 0; dice && i < dice.length; i++) {
 		var d = dice[i];
-		console.log("current die: " + d);
+		//console.log("current die: " + d);
 		var dieEl = $('<img src="/static/i/Dice-' + d + '.svg" alt="' + d + '" width="50" height="50"/>');
-		console.log("die img: " + dieEl)
+		//console.log("die img: " + dieEl)
 		this.diceElement_.append(dieEl);
 	}
 }
