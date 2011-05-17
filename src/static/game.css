@@ -18,14 +18,11 @@ body {
 /* TRADE */
 
 #trade {
-	position:absolute;
-	left:0;
-	top:22px;
-	width:300px;
-	height:100%;
 	background-color: rgba(0,0,0,0.5);
+	padding:10px;
 }
-
+#trade-inner {
+}
 /* end TRADE */
 
 #context-actions {
@@ -34,24 +31,51 @@ body {
 	background-color: #FDFDFD;
 	padding:10px;
 }
+ul.resource-view {
+	height:66px;
+}
+ul.resource-view>li>span {
+	visibility:hidden;
+}
+ul.resource-view>li {
+	width:25px;
+	height:40px;
+	border:solid 3px white;
+	border-radius:2px;
+	float:left;
+	margin-left:-15px;
+	margin-top:20px;
+	
+	-webkit-transition: all 0.2s ease-in-out;
+	-moz-transition: all 0.2s ease-in-out;
+	-o-transition: all 0.2s ease-in-out;
+	-ms-transition: all 0.2s ease-in-out;
+	transition: all 0.2s ease-in-out;
+}
+ul.resource-view>li:first-child {
+	margin-left:0;
+}
+ul.resource-view>li:hover {
+	margin-top:0;
+}
 
-.sheep {
+.resource-view-wool {
     background-color: #BFE882;
 }
 
-.wheat {
+.resource-view-wheat {
     background-color: #FFEF4F;
 }
 
-.wood {
+.resource-view-wood {
     background-color: #00932C;
 }
 
-.rock {
+.resource-view-ore {
     background-color: #787887;
 }
 
-.clay {
+.resource-view-brick {
     background-color: firebrick;
 }
 .hex {
@@ -397,7 +421,7 @@ div.size-bar-attach-bottom {
     font-size:18px;
 }
 
-#pp h3 {
+#pp h3, #trade h3 {
 	clear:both;
 	color: #EEEEFF;
 	padding:10px;
@@ -423,7 +447,7 @@ div.size-bar-attach-bottom {
 #toolbar {
     width: 100%;
     background-color: #000;
-    padding: 5px;
+    padding-top: 5px;
     color: #FFF;
     height:22px;
     font-family:Fanwood;

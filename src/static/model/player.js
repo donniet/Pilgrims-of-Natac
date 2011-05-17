@@ -73,7 +73,7 @@ Player.prototype.loadJSON = function (json) {
 	
     Event.fire(this, "load", [this]);
 }
-
+Player.prototype.getResources = function() { return this.resources_; }
 Player.prototype.getName = function() { return this.name_; }
 
 

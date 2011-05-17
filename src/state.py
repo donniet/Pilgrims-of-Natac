@@ -393,6 +393,8 @@ class GameState(object):
             except channel.InvalidChannelClientIdError:
                 # we should remove this user from the user list
                 self.unregisterUser(user)
+            except KeyError:
+                self.unregisterUser(user)
                 
             
     def sendMessageUser(self, user, message):

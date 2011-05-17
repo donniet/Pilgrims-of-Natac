@@ -23,6 +23,7 @@
 <script type="text/javascript" src="/static/view/playerListView.js"></script>
 <script type="text/javascript" src="/static/view/errorView.js"></script>
 <script type="text/javascript" src="/static/view/playerView.js"></script>
+<script type="text/javascript" src="/static/view/layout.js"></script>
 <script type="text/javascript" src="/static/chat.js"></script>
 <script type="text/javascript">//<![CDATA[
 
@@ -31,182 +32,57 @@ function getCookie(name) {
     return r ? r[1] : undefined;
 }
 
-function Layout() {
-	this.layoutItems_ = new Array();
-	this.grabSize_ = 10;
-	this.handle_ = null;
+function ResourcesView(element) {
+	this.el_ = element;
+	this.resources_ = null;
+}
+ResourcesView.prototype.setPlayer = function(player) {
+	this.player_ = player;
 	
 	var self = this;
-	$(window).resize(function() { self.handleResize(); });
-	$(document).ready(function() { self.handleResize(); });
-	
-	$(window).mousemove(function(evt) {self.handleSizeMouseMove(evt);});
+	Event.addListener(this.player_, "load", function() { self.render(); });
 }
-Layout.prototype.addItem = function(element, attach, dimension, sizeable) {
-	var self = this;
-	var item = {element: element, attach: attach, dimension: dimension, sizeEl: sizeEl};
+ResourcesView.prototype.render = function() {
+	this.el_.empty();
 	
-	var sizeEl = null;
-	if(sizeable) {
-		sizeEl = $("<div class='size-bar'/>");
-		sizeEl.addClass("size-bar-attach-" + attach);
-		sizeEl.css("position", "absolute");
-		if(attach == "left") {
-			sizeEl.css("width", this.grabSize_);
-			sizeEl.css("top", 0);
-			sizeEl.css("right", 0);
-			sizeEl.css("height", "100%");
+	var resources = this.player_.getResources();
+	
+	var ul = $("<ul/>");
+	ul.addClass("resource-view");
+	for(var i = 0; i < resources.length; i++) {
+		var r = resources[i];
+		for(var j = 0; j < r.amount; j++) {
+			var li = $("<li/>");
+			var resource = $("<span/>");
+			li.addClass("resource-view-" + r.resource);
+			resource.text(r.resource);
+			li.append(resource);
+			ul.append(li);
 		}
-		else if(attach == "right") {
-			sizeEl.css("width", this.grabSize_);
-			sizeEl.css("top", 0);
-			sizeEl.css("left", 0);
-			sizeEl.css("height", "100%");
-		}
-		else if(attach == "top") {
-			sizeEl.css("height", this.grabSize_);
-			sizeEl.css("left", 0);
-			sizeEl.css("bottom", 0);
-			sizeEl.css("width", "100%");
-		}
-		else if(attach == "bottom") {
-			sizeEl.css("height", this.grabSize_);
-			sizeEl.css("left", 0);
-			sizeEl.css("top", 0);
-			sizeEl.css("width", "100%");
-		}
-		
-		element.append(sizeEl);
-		
-		sizeEl.mousedown(function(evt) {self.handleSizeMouseDown(evt, item); return false;});
-		sizeEl.mouseup(function(evt) {self.handleSizeMouseUp(evt, item);});
-		sizeEl.mousemove(function(evt) {self.handleSizeMouseMove(evt, item);});
 	}
-	this.layoutItems_.push(item);
-}
-Layout.prototype.handleSizeMouseDown = function(evt, item) {
-	this.handle_ = {x:evt.clientX, y:evt.clientY, item:item};
-	return false;
-}
-Layout.prototype.handleSizeMouseUp = function(evt, item) {
-	this.handle_ = null;
-}
-Layout.prototype.handleSizeMouseMove = function(evt) {
-	if(this.handle_) {
-		var item = this.handle_.item;
-		
-		if(item.attach == "left") {
-			var dx = evt.clientX - this.handle_.x;
-			item.dimension += dx;
-			this.handle_.x = evt.clientX;
-		}
-		else if(item.attach == "right") {
-			var dx = evt.clientX - this.handle_.x;
-			item.dimension -= dx;
-			this.handle_.x = evt.clientX;
-		}
-		else if(item.attach == "bottom") {
-			var dy = this.handle_.y - evt.clientY;
-			item.dimension += dy;
-			this.handle_.y = evt.clientY;
-		}
-		else if(item.attach == "top") {
-			var dy = this.handle_.y - evt.clientY;
-			item.dimension -= dy;
-			this.handle_.y = evt.clientY;			
-		}
-		this.handleResize();
-	}
-}
-Layout.prototype.handleResize = function() {
-	var m = {
-		"top":0,
-		"right":0,
-		"bottom":0,
-		"left":0
-	};
-	for(var i = 0; i < this.layoutItems_.length; i++) {
-		var li = this.layoutItems_[i];
-		this.layout(li.element, li.attach, li.dimension, li.sizeEl, m);
-	} 
-}
-Layout.prototype.layout = function(element, attach, dimension, sizeEl, margin) {
-	var width = $(window).width();
-	var height = $(window).height();
-	
-	$(element).css("position", "absolute");
-	$(element).css("display", "block");
-	
-	switch(attach) {
-	case "top":
-		if(sizeEl) {
-			$(sizeEl).css("bottom",0);
-			$(sizeEl).css("left", 0);
-			$(sizeEl).css("width", "100%");
-			$(sizeEl).css("height", this.grabSize_ + "px");
-		}
-		$(element).css("top", margin["top"] + "px");
-		$(element).css("left", margin["left"] + "px");
-		$(element).css("width", (width - margin["left"] - margin["right"]) + "px");
-		$(element).css("height", dimension + "px");
-		margin["top"] += dimension;
-		break;
-	case "right": 
-		if(sizeEl) {
-			$(sizeEl).css("top",0);
-			$(sizeEl).css("right", 0);
-			$(sizeEl).css("height", "100%");
-			$(sizeEl).css("width", this.grabSize_ + "px");
-		}
-		$(element).css("top", margin["top"] + "px");
-		$(element).css("right", margin["right"] + "px");
-		$(element).css("width", dimension + "px");
-		$(element).css("height", (height - margin["top"] - margin["bottom"]) + "px");
-		margin["right"] += dimension;
-		break;
-	case "bottom":
-		if(sizeEl) {
-			$(sizeEl).css("top",0);
-			$(sizeEl).css("left", 0);
-			$(sizeEl).css("width", "100%");
-			$(sizeEl).css("height", this.grabSize_ + "px");
-		} 
-		$(element).css("bottom", margin["bottom"] + "px");
-		$(element).css("left", margin["left"] + "px");
-		$(element).css("width", (width - margin["left"] - margin["right"]) + "px");
-		$(element).css("height", dimension + "px");
-		margin["bottom"] += dimension;
-		break;
-	case "left":  
-		if(sizeEl) {
-			$(sizeEl).css("top",0);
-			$(sizeEl).css("left", 0);
-			$(sizeEl).css("height", "100%");
-			$(sizeEl).css("width", this.grabSize_ + "px");
-		} 
-		$(element).css("top", margin["top"] + "px");
-		$(element).css("left", margin["left"] + "px");
-		$(element).css("width", dimension + "px");
-		$(element).css("height", (height - margin["top"] - margin["bottom"]) + "px");
-		margin["left"] += dimension;
-		break;
-	case "center":
-		if(element.nodeName && element.nodeName == "svg") {
-			element.setAttribute("width", (width - margin["left"] - margin["right"]) + "px");
-			element.setAttribute("height", (height - margin["top"] - margin["bottom"]) + "px");
-			$(element).css("top", margin["top"] + "px");
-			$(element).css("left", margin["left"] + "px");
-		}
-		else {
-			$(element).css("top", margin["top"] + "px");
-			$(element).css("left", margin["left"] + "px");
-			$(element).css("width", (width - margin["left"] - margin["right"]) + "px");
-			$(element).css("height", (height - margin["top"] - margin["bottom"]) + "px");
-		}
-		break;
-	}	
+	this.el_.append(ul);
 }
 
+function TradeView(element) {
+	this.el_ = element;
+	this.board_ = null;
+}
+TradeView.prototype.setBoard = function(board) {
+	this.board_ = board;
+	
+	var self = this;
+	Event.addListener(this.board_, "load", function() { self.render(); });
+}
+TradeView.prototype.render = function() {
+	this.el_.empty();
+	
+	var resourcesDiv = $("<div/>");
+	this.el_.append(resourcesDiv);
+	
+	var resourcesView = new ResourcesView(resourcesDiv);
+	resourcesView.setPlayer(this.board_.getCurrentPlayer());
+	resourcesView.render();
+}
 
 function handleLoad() {
 	var board = new Board("{{token}}", {
@@ -218,8 +94,7 @@ function handleLoad() {
 	
 	var layout = new Layout();
 	
-	var boardView = new BoardView(document.getElementById("board"), 
-	[
+	var boardView = new BoardView(document.getElementById("board"), [
    	    {type: "settlement", element:document.getElementById("settlement-model"), center:{x:15,y:15}},
    	    {type: "city", 		 element:document.getElementById("city-model"), 	  center:{x:25,y:15}}
    	]);
@@ -235,6 +110,8 @@ function handleLoad() {
 	var chatview = new ChatView($("#chat"));
 	chatview.setBoard(board);
 	
+	layout.addItem($("#toolbar"), "top", 30);
+	
 	{% ifnotequal color None %}
 	var actionsView = new ActionsView($("#actions"));
 	actionsView.setBoard(board);
@@ -246,15 +123,21 @@ function handleLoad() {
 	var playerView1 = new PlayerView($("#pp"));
 	playerView1.setBoard(board);
 	
-	layout.addItem($("#toolbar"), "top", 30);
-	layout.addItem($("#trade"), "left", 100, true);
-	layout.addItem($("#pp"), "right", 350, true);
-	layout.addItem($("#chat"), "bottom", 200, true);
+	var resourcesView = new ResourcesView($("#pp-resources"));
+	resourcesView.setPlayer(board.getCurrentPlayer());
 	
 	
-	layout.addItem(document.getElementById("game-board"), "center");
+	var tradeView = new TradeView($("#trade-inner"));
+	tradeView.setBoard(board);
+		
+	layout.addItem($("#trade"), "left", 100, true);	
 	
     {% endifnotequal %}
+    
+    layout.addItem($("#pp"), "right", 350, true);
+	layout.addItem($("#chat"), "bottom", 200, true);
+	
+    layout.addItem(document.getElementById("game-board"), "center");
 	
 	board.load();
 			    
@@ -297,39 +180,37 @@ $(document).ready(handleLoad);
     </div>
 
     <div id="game-board">
-
-
-
-<!--
-<object id="AdobeSVG" classid="clsid:78156a80-c6a1-4bbf-8e6a-3cd390eeb4e2"> </object>
-<?import namespace="svg" urn="http://www.w3.org/2000/svg" implementation="#AdobeSVG"?>
--->
-
-
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" width="100%" height="1024px" id="svg">
-    <g id="board"></g>
-    <g id="prototypes" style="visibility:hidden;">
-        <svg id="settlement-model" y="331.41016151377545" x="635">
-            <g>
-                <rect  width="30" height="30"
-                       style="stroke: black;"/>
-                <line x1="15" y1="0" x2="15" y2="30" style="stroke:black;" />
-            </g>
-
-        </svg>
-        <svg id="city-model" x="325" y="158.20508075688772">
-            <g>
-                <rect  x="0" y="0" width="50" height="30"
-                       style="stroke: black;"/>
-                <line x1="15" y1="0" x2="15" y2="30" style="stroke:black;" />
-                <line x1="30" y1="0" x2="30" y2="30" style="stroke:black;" />
-            </g>
-        </svg>
-    </g>
     
-   
-
-</svg>
+		<!--
+		<object id="AdobeSVG" classid="clsid:78156a80-c6a1-4bbf-8e6a-3cd390eeb4e2"> </object>
+		<?import namespace="svg" urn="http://www.w3.org/2000/svg" implementation="#AdobeSVG"?>
+		-->
+		
+		
+		<svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" width="100%" height="1024px" id="svg">
+		    <g id="board"></g>
+		    <g id="prototypes" style="visibility:hidden;">
+		        <svg id="settlement-model" y="331.41016151377545" x="635">
+		            <g>
+		                <rect  width="30" height="30"
+		                       style="stroke: black;"/>
+		                <line x1="15" y1="0" x2="15" y2="30" style="stroke:black;" />
+		            </g>
+		
+		        </svg>
+		        <svg id="city-model" x="325" y="158.20508075688772">
+		            <g>
+		                <rect  x="0" y="0" width="50" height="30"
+		                       style="stroke: black;"/>
+		                <line x1="15" y1="0" x2="15" y2="30" style="stroke:black;" />
+		                <line x1="30" y1="0" x2="30" y2="30" style="stroke:black;" />
+		            </g>
+		        </svg>
+		    </g>
+		    
+		   
+		
+		</svg>
 </div> <!-- game-board -->
 
 
@@ -338,26 +219,7 @@ $(document).ready(handleLoad);
      {% ifnotequal color None %}
      <h3>Resources</h3>
      <div id="pp-resources">
-         <div class="pp-res">
-             <div id="pp-res-card-sheep" class="card" title="Sheep"><div class="sheep"></div></div>
-             <div id="pp-res-sheep">0</div>
-         </div>
-         <div class="pp-res">
-             <div id="pp-res-card-wheat" class="card" title="Wheat"><div class="wheat"></div></div>
-             <div id="pp-res-wheat">0</div>
-         </div>
-         <div class="pp-res">
-             <div id="pp-res-card-wood" class="card" title="Wood"><div class="wood"></div></div>
-             <div id="pp-res-wood">0</div>
-         </div>
-         <div class="pp-res">
-             <div id="pp-res-card-rock" class="card" title="Ore"><div class="rock"></div></div>
-             <div id="pp-res-rock">0</div>
-         </div>
-         <div class="pp-res">
-             <div id="pp-res-card-clay" class="card" title="Clay"><div class="clay"></div></div>
-             <div id="pp-res-clay">0</div>
-         </div>
+    
      </div>
      
      <h3>Bonuses</h3>
@@ -376,10 +238,11 @@ $(document).ready(handleLoad);
 	<div id="players"></div>
 </div>
 
-<div id="chat">
-</div>
+<div id="chat"></div>
 
 <div id="trade">
+<h3>Trade</h3>
+<div id="trade-inner"></div>
 </div>
 
 </body>
