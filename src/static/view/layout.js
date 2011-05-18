@@ -10,9 +10,9 @@ function Layout() {
 	
 	$(window).mousemove(function(evt) {self.handleSizeMouseMove(evt);});
 }
-Layout.prototype.addItem = function(element, attach, dimension, sizeable) {
+Layout.prototype.addItem = function(element, attach, dimension, sizeable, overlay) {
 	var self = this;
-	var item = {element: element, attach: attach, dimension: dimension, sizeEl: sizeEl};
+	var item = {element: element, attach: attach, dimension: dimension, sizeEl: sizeEl, overlay:overlay};
 	
 	var sizeEl = null;
 	if(sizeable) {
@@ -95,10 +95,10 @@ Layout.prototype.handleResize = function() {
 	};
 	for(var i = 0; i < this.layoutItems_.length; i++) {
 		var li = this.layoutItems_[i];
-		this.layout(li.element, li.attach, li.dimension, li.sizeEl, m);
+		this.layout(li.element, li.attach, li.dimension, li.sizeEl, li.overlay, m);
 	} 
 }
-Layout.prototype.layout = function(element, attach, dimension, sizeEl, margin) {
+Layout.prototype.layout = function(element, attach, dimension, sizeEl, overlay, margin) {
 	var width = $(window).width();
 	var height = $(window).height();
 	
@@ -117,7 +117,7 @@ Layout.prototype.layout = function(element, attach, dimension, sizeEl, margin) {
 		$(element).css("left", margin["left"] + "px");
 		$(element).css("width", (width - margin["left"] - margin["right"]) + "px");
 		$(element).css("height", dimension + "px");
-		margin["top"] += dimension;
+		if(!overlay) margin["top"] += dimension;
 		break;
 	case "right": 
 		if(sizeEl) {
@@ -130,7 +130,7 @@ Layout.prototype.layout = function(element, attach, dimension, sizeEl, margin) {
 		$(element).css("right", margin["right"] + "px");
 		$(element).css("width", dimension + "px");
 		$(element).css("height", (height - margin["top"] - margin["bottom"]) + "px");
-		margin["right"] += dimension;
+		if(!overlay) margin["right"] += dimension;
 		break;
 	case "bottom":
 		if(sizeEl) {
@@ -143,7 +143,7 @@ Layout.prototype.layout = function(element, attach, dimension, sizeEl, margin) {
 		$(element).css("left", margin["left"] + "px");
 		$(element).css("width", (width - margin["left"] - margin["right"]) + "px");
 		$(element).css("height", dimension + "px");
-		margin["bottom"] += dimension;
+		if(!overlay) margin["bottom"] += dimension;
 		break;
 	case "left":  
 		if(sizeEl) {
@@ -156,7 +156,7 @@ Layout.prototype.layout = function(element, attach, dimension, sizeEl, margin) {
 		$(element).css("left", margin["left"] + "px");
 		$(element).css("width", dimension + "px");
 		$(element).css("height", (height - margin["top"] - margin["bottom"]) + "px");
-		margin["left"] += dimension;
+		if(!overlay) margin["left"] += dimension;
 		break;
 	case "center":
 		if(element.nodeName && element.nodeName == "svg") {

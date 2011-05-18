@@ -12,14 +12,14 @@
 body {
     margin: 0px;
     background: url(/static/i/wood_100.jpg);
-    font-family: "Fanwood"
+    font-family: "Fanwood";
+    overflow:hidden;
 }
 
 /* TRADE */
 
 #trade {
 	background-color: rgba(0,0,0,0.5);
-	padding:10px;
 }
 #trade-inner {
 }
@@ -213,7 +213,6 @@ ul.resource-view>li:hover {
 	top:0;
 	left:0;
 	height:100%;
-	padding-bottom:25px;
 	width:100%;
 	overflow:auto;
 	font-family:"Fanwood";
@@ -410,12 +409,6 @@ div.size-bar-attach-bottom {
 }
 
 #pp {
-    position: absolute;
-    width: 300px;
-    right:0;
-    top:32px;
-    padding-bottom:10px;
-
     background: rgba(0,0,0, 0.5);
     font-family:"Fanwood";
     font-size:18px;

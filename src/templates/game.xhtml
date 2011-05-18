@@ -135,7 +135,7 @@ function handleLoad() {
     {% endifnotequal %}
     
     layout.addItem($("#pp"), "right", 350, true);
-	layout.addItem($("#chat"), "bottom", 200, true);
+	layout.addItem($("#chat"), "bottom", 200, true, true);
 	
     layout.addItem(document.getElementById("game-board"), "center");
 	
@@ -187,7 +187,7 @@ $(document).ready(handleLoad);
 		-->
 		
 		
-		<svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" width="100%" height="1024px" id="svg">
+		<svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" width="100%" height="100%" id="svg">
 		    <g id="board"></g>
 		    <g id="prototypes" style="visibility:hidden;">
 		        <svg id="settlement-model" y="331.41016151377545" x="635">
