@@ -47,6 +47,8 @@ ResourcesView.prototype.render = function() {
 	
 	var resources = this.player_.getResources();
 	
+	var self = this;
+	
 	var ul = $("<ul/>");
 	ul.addClass("resource-view");
 	for(var i = 0; i < resources.length; i++) {
@@ -54,8 +56,15 @@ ResourcesView.prototype.render = function() {
 		for(var j = 0; j < r.amount; j++) {
 			var li = $("<li/>");
 			var resource = $("<span/>");
-			li.addClass("resource-view-" + r.resource);
-			resource.text(r.resource);
+			li.click(function(r) { 
+				return function() { 
+					Event.fire(self, "resourceclick", [r]); 
+				}	
+			}(r.resource));
+			resource.addClass("resource-view-" + r.resource);
+			var textSpan = $("<span/>");
+			textSpan.text(r.resource);
+			resource.append(textSpan);
 			li.append(resource);
 			ul.append(li);
 		}
@@ -80,8 +89,39 @@ TradeView.prototype.render = function() {
 	this.el_.append(resourcesDiv);
 	
 	var resourcesView = new ResourcesView(resourcesDiv);
-	resourcesView.setPlayer(this.board_.getCurrentPlayer());
+	var currentPlayer = this.board_.getCurrentPlayer();
+	resourcesView.setPlayer(currentPlayer);
 	resourcesView.render();
+	
+	this.renderPlayers(this.board_.getPlayers(), currentPlayer);
+	
+	Event.addListener(resourcesView, "resourceclick", this.handleResourceClick, this);
+}
+TradeView.prototype.renderPlayers = function(players, currentPlayer) {
+	var div = $("<div class='trade-view-players'/>");
+	var ul = $("<ul/>");
+	
+	for(var i = 0; players && i < players.length; i++) {
+		var p = players[i];
+		var li = $("<li/>");
+		var span = $("<span class='list-player-image'></span>");
+		var img = $("<img/>");
+		img.attr("width", 44);
+		img.attr("height", 44);
+		
+		img.attr("src", p.image_);
+		span.append(img);
+		li.append(span);
+		
+		ul.append(li);
+	}	
+	
+	div.append(ul);
+	this.el_.append(div);
+}
+
+TradeView.prototype.handleResourceClick = function(resource) {
+	
 }
 
 function handleLoad() {

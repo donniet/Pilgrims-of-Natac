@@ -11,7 +11,7 @@ PlayerListItemView.prototype.setPlayer = function(player) {
 }
 	
 PlayerListItemView.prototype.render = function() {
-	span = $("<span class='list-player-image'></span>");
+	var span = $("<span class='list-player-image'></span>");
 	var img = $("<img/>");
 	img.attr("width", 44);
 	img.attr("height", 44);

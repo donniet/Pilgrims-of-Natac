@@ -25,6 +25,11 @@ body {
 }
 /* end TRADE */
 
+.trade-view-players {
+	clear:left;
+	padding-top:20px;
+}
+
 #context-actions {
 	font-family: Verdana, Arial, Sans-Serif;
 	font-size: 12px;
@@ -32,31 +37,39 @@ body {
 	padding:10px;
 }
 ul.resource-view {
-	height:66px;
+	margin-left:15px;
+	margin-bottom:15px;
+}
+ul.resource-view>li>span>span {
+	visibility:hidden;
 }
 ul.resource-view>li>span {
-	visibility:hidden;
+	display:block;
+	width:25px;
+	height:40px;
+	border:solid 1px white;
+	border-radius:2px;
+	text-decoration:none;
+	
 }
 ul.resource-view>li {
 	width:25px;
 	height:40px;
-	border:solid 3px white;
-	border-radius:2px;
-	float:left;
+	margin-top:-20px;
 	margin-left:-15px;
-	margin-top:20px;
+	padding-top:25px;
+	padding-bottom:0px;
+	float:left;
 	
-	-webkit-transition: all 0.2s ease-in-out;
-	-moz-transition: all 0.2s ease-in-out;
-	-o-transition: all 0.2s ease-in-out;
-	-ms-transition: all 0.2s ease-in-out;
-	transition: all 0.2s ease-in-out;
-}
-ul.resource-view>li:first-child {
-	margin-left:0;
+	-webkit-transition: all 0.2s linear;
+	-moz-transition: all 0.2s linear;
+	-o-transition: all 0.2s linear;
+	-ms-transition: all 0.2s linear;
+	transition: all 0.2s linear;
 }
 ul.resource-view>li:hover {
-	margin-top:0;
+	padding-top:0;
+	padding-bottom:25px;
 }
 
 .resource-view-wool {

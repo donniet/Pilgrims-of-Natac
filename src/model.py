@@ -108,6 +108,112 @@ class LogEntry(db.Model):
         else:
             return None
 
+class Trade(db.Model):
+    tradeKey = db.StringProperty()
+    dateTimeStarted = db.DateTimeProperty()
+    dateTimeCompleted = db.DateTimeProperty()
+    state = db.StringProperty()
+    colorFrom = db.StringProperty()
+    colorTo = db.StringProperty()
+    
+    def getOffers(self):
+        offers = db.Query(TradeOffer).parent(self).fetch(100)
+        ret = dict()
+        for o in offers:
+            ret[o.color] = o.getOffer()
+            
+        return ret
+
+    def getOfferByColor(self, color):
+        to = db.Query(TradeOffer).parent(self).filter("color =", color).get()
+        if to is not None:
+            return to.getOffer()
+    
+    def changeOffer(self, color, resourceDict):
+        db.run_in_transaction(self.__changeOfferTran, color, resourceDict)
+    
+    def __changeOfferTran(self, color, resourceDict):
+        self.state = None
+        self.colorFrom = None
+        self.colorTo = None
+        self.put()
+        to = self.getOfferByColor(color)
+        
+        if to is not None:
+            ro = db.Query(PlayerResources).ancestor(to).fetch(100)
+            for pr in ro:
+                pr.delete()
+                
+            for r,a in resourceDict.items():
+                pr = PlayerResources(parent=to, resource=r, amount=a)
+                pr.put()
+    
+    def acceptOffer(self, colorFrom, colorTo):
+        self.state = "accepted"
+        self.colorFrom = colorFrom
+        self.colorTo = colorTo
+        self.put()
+        return True
+    
+    def confirmOffer(self, colorFrom, colorTo):
+        if self.colorFrom == colorFrom and self.colorTo == colorTo:
+            fromOffer = self.getOfferByColor(colorFrom)
+            toOffer = self.getOfferByColor(colorTo)
+            
+            board = self.parent()
+            playerFrom = board.getPlayerByColor(colorFrom)
+            playerTo = board.getPlayerByColor(colorTo)
+            
+            negFromOffer = dict(map(lambda r,a: (r,-a), fromOffer.items()))
+            negToOffer = dict(map(lambda r,a: (r,-a), toOffer.items()))
+            
+            valid = \
+                playerFrom.adjustResources(negFromOffer, True) and \
+                playerFrom.adjustResources(toOffer, True) and \
+                playerTo.adjustResources(negToOffer, True) and \
+                playerTo.adjustResources(fromOffer, True)
+                
+            if not valid:
+                return False
+            
+            playerFrom.adjustResources(negFromOffer)
+            playerFrom.adjustResources(toOffer)
+            playerTo.adjustResources(negToOffer)
+            playerTo.adjustResources(fromOffer)            
+            
+            self.state = "confirmed"
+            self.dateTimeCompleted = datetime.datetime.now()
+            self.put()            
+            
+            board = self.parent()
+            board.currentTradeKey = None
+            board.put()
+            return True
+        else:
+            return False
+        
+    def cancel(self):
+        self.state = "cancelled"
+        self.dateTimeCompleted = datetime.datetime.now()
+        self.put()
+        
+        board = self.parent()
+        board.currentTradeKey = None
+        board.put()
+        return True
+
+class TradeOffer(db.Model):
+    color = db.StringProperty()
+    
+    def getOffer(self):
+        ret = dict()
+        
+        offers = db.Query(PlayerResources).ancestor(self).fetch(100)
+        for o in offers:
+            ret[o.resource] = o.amount
+        
+        return ret
+
 class Board(db.Model):
     dateTimeCreated = db.DateTimeProperty()
     dateTimeStarted = db.DateTimeProperty()
@@ -126,6 +232,8 @@ class Board(db.Model):
     winner = db.UserProperty()
     minimumPlayers = db.IntegerProperty()
     pointsNeededToWin = db.IntegerProperty()
+    stateKey = db.StringProperty()
+    currentTradeKey = db.StringProperty()
     resourceMap = None
     
     def log(self, type, message, actor=None):
@@ -138,6 +246,25 @@ class Board(db.Model):
     def save(self, callback):
         rpc = db.create_rpc(deadline=5, callback=callback)
         self.put(rpc)
+    
+    def createTrade(self, tradeKey):
+        t = Trade(parent=self, tradeKey=tradeKey, dateTimeStarted=datetime.datetime.now())
+        t.put()
+        self.tradeKey = tradeKey
+        self.put()
+        
+        players = self.getPlayers()
+        for p in players:
+            to = TradeOffer(parent=t, color=p.color)
+            to.put()
+            
+        return t
+    
+    def getCurrentTrade(self):
+        return db.Query(Trade).parent(self).filter("tradeKey =", self.tradeKey).get()
+    
+    def getTradeByKey(self, tradeKey):
+        return db.Query(Trade).parent(self).filter("tradeKey =", tradeKey).get()
     
     def getGamePhases(self):
         return db.Query(GamePhase).ancestor(self).order("order").fetch(100)
@@ -287,7 +414,7 @@ class Board(db.Model):
         devTypes = db.Query(DevelopmentType).ancestor(self).filter("location =", location).fetch(100)
         for dt in devTypes:
             ret[dt.name] = dt
-            cost = db.Query(DevelopmentTypeCost).ancestor(dt).fetch(100)
+            cost = db.Query(Cost).ancestor(dt).fetch(100)
             ret["cost"] = dict()
             for c in cost:
                 ret["cost"][c.resource] = c.amount
@@ -319,13 +446,13 @@ class DevelopmentType(db.Model):
     def getCost(self):
         ret = dict()
         
-        cost = db.Query(DevelopmentTypeCost).ancestor(self).fetch(100)
+        cost = db.Query(Cost).ancestor(self).fetch(100)
         for c in cost:
             ret[c.resource] = c.amount
         
         return ret
 
-class DevelopmentTypeCost(db.Model):
+class Cost(db.Model):
     resource = db.StringProperty()
     amount = db.IntegerProperty()
 
@@ -597,9 +724,8 @@ class GameListEncoder(json.JSONEncoder):
             #raise TypeError("%r is not JSON serializable" % (obj,))
             return json.JSONEncoder.default(self, obj)
 
-
 class MessageEncoder(json.JSONEncoder):
-     def default(self, obj):
+    def default(self, obj):
         if isinstance(obj, Player):
             playerResources = db.Query(PlayerResources).ancestor(obj).fetch(1000)
             
@@ -641,7 +767,18 @@ class BoardEncoder(json.JSONEncoder):
                 diceValues = obj.diceValues,
                 dice = obj.dice,
                 developmentTypes=db.Query(DevelopmentType).ancestor(obj),
-                log=obj.getLogEntries(20,0)
+                log=obj.getLogEntries(20,0),
+                currentTrade=obj.getCurrentTrade()
+            )
+        elif isinstance(obj, Trade):
+            return dict(
+                tradeKey = obj.tradeKey,
+                dateTimeStarted = obj.dateTimeStarted,
+                dateTimeCompleted = obj.dateTimeCompleted,
+                state = obj.state,
+                colorFrom = obj.colorFrom,
+                colorTo = obj.colorTo,
+                offers = obj.getOffers(),
             )
         elif isinstance(obj, LogEntry):
             return dict(
