@@ -69,6 +69,27 @@ class CurrentBoardByGameHandler(webapp.RequestHandler):
         
         #
         s.get_board().dump(self.response.out)
+
+
+class CurrentTradeByGameHandler(webapp.RequestHandler):
+    def get(self, gamekey):
+        user = users.get_current_user()
+        if not user:
+            self.response.headers.add_header("Content-Type", "application/json")
+            self.response.set_status(401)
+            json.dump(dict(error="not signed in"), self.response.out)
+            return
+        
+        s = get_live_game(gamekey)
+        
+        if s is None:
+            json.dump(dict(error="game is not live or does not exist"), self.response.out)
+            return
+        
+        trade = s.getCurrentTrade()
+        #self.response.headers.add_header("Content-Type", "application/json")
+        json.dump(trade, self.response.out, cls=model.BoardEncoder)
+        
         
 class CurrentPlayerByGameHandler(webapp.RequestHandler):
     def get(self, gamekey):
@@ -212,6 +233,7 @@ class ReserveHandler(webapp.RequestHandler):
 
      
 
+
 class GameHandler(webapp.RequestHandler):
     @login_required
     def get(self, gamekey):
@@ -241,6 +263,7 @@ class GameHandler(webapp.RequestHandler):
             'boardUrl':"currentBoard",
             'actionUrl':"action",
             'playerUrl':"currentPlayer",
+            'tradeUrl':"currentTrade",
             'joinUrl':"join",
             'isStarted': (s.get_board().dateTimeStarted is not None),
         }
@@ -373,6 +396,7 @@ class Application(webapp.WSGIApplication):
             (r"/game/(.*)/action", ActionHandler),
             (r"/game/(.*)/join", JoinHandler),
             (r"/game/(.*)/currentPlayer", CurrentPlayerByGameHandler),
+            (r"/game/(.*)/currentTrade", CurrentTradeByGameHandler),
             (r"/game/(.*)/reserve", ReserveHandler),
             (r"/gameList", GameListHandler),
             (r"/creategame", NewGameHandler),

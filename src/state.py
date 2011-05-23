@@ -185,7 +185,7 @@ def create_game(user, template = BoardTemplate):
     return gameKey
     
 def get_game(gamekey):
-    logging.info("finding game %s" % (gamekey,))
+    #logging.info("finding game %s" % (gamekey,))
     
     b = model.findBoard(gamekey)
     
@@ -493,6 +493,18 @@ class GameState(object):
         elif action == "startTrade":
             ret = self.startTrade(user)
             logmessage = "started trading"
+        elif action == "cancelTrade":
+            ret = self.cancelTrade(user)
+            logmessage = "cancelled trade"
+        elif action == "changeTradeOffer":
+            ret = self.changeTradeOffer(user, data)
+            logmessage = "changed trade offer"
+        elif action == "acceptTradeOffer":
+            ret = self.acceptTradeOffer(user, data)
+            logmessage = "acceptTradeOffer"
+        elif action == "confirmTradeOffer":
+            ret = self.confirmTradeOffer(user)
+            logmessage = "confirm trade offer"        
         elif action == "chat":
             self.board.log("chat", data, user)
             color = self.board.getPlayer(user).color
@@ -579,8 +591,10 @@ class GameState(object):
                 actions.append("rollDice")
             elif turnPhase == "moveRobber":
                 actions.append("placeRobber")
-            elif turnPhase == "trade" or turnPhase == "playCard" or turnPhase == "build":
-                actions.extend(["startTrade", "playCard", "placeSettlement", "placeCity", "placeRoad","endTurn"])
+            elif turnPhase == "playCard" or turnPhase == "build":
+                actions.extend(["cancelTrade", "startTrade", "playCard", "placeSettlement", "placeCity", "placeRoad","endTurn"])
+            elif turnPhase == "trade":
+                actions.extend(["cancelTrade"])
         elif gamePhase == "complete":
             pass
         return actions
@@ -1020,9 +1034,9 @@ class GameState(object):
         if gp is None or tp is None:
             return ActionResponse(False, "Error: The game has not started or is in the incorrect phase.")
         
-        if gp.phase != "main" or tp.phase != "trade":
-            logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
-            return ActionResponse(False, "There is no trade in progress.")
+        #if gp.phase != "main" or tp.phase != "trade":
+        #    logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
+        #    return ActionResponse(False, "There is no trade in progress.")
         
         tp = gp.getTurnPhaseByName("build")
         if tp is None:
@@ -1034,6 +1048,7 @@ class GameState(object):
             t.cancel()
             
         self.board.turnPhase = tp.order
+        self.board.currentTradeKey = None
         self.board.put()
         return ActionResponse(True)
         
@@ -1092,28 +1107,21 @@ class GameState(object):
             logging.info("no current trade in progress")
             return ActionResponse(False, "There is no current trade in progress.")
         
-        if t.state is not None:
+        if t.state != "initial":
             logging.info("trade is not in correct state (current state: %s)" % t.state)
             return ActionResponse(False, "Cannot accept the trade right now")
         
-        ret = t.acceptOffer(color, colorTo)
+        ret = t.acceptOffer(colorTo)
         if not ret:
             logging.info("accept of trade failed")
             return ActionResponse(False, "Trade could not be accepted.")
         
         return ActionResponse(True)
     
-    def confirmTradeOffer(self, user, colorFrom):
+    def confirmTradeOffer(self, user):
         p = self.board.getPlayer(user)
         if p == None: 
             return ActionResponse(False, "You are not a player in this game")
-        
-        colorTo = p.color
-        
-        pTo = self.board.getPlayerByColor(colorFrom)
-        if pTo is None:
-            logging.info("to player does not exist: %s" % colorFrom)
-            return ActionResponse(False, "The player %s does not exist." % colorFrom)
         
         gp = self.board.getCurrentGamePhase()
         tp = self.board.getCurrentTurnPhase()
@@ -1124,12 +1132,17 @@ class GameState(object):
             logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
             return ActionResponse(False, "There is no trade in progress.")
         
+        tp = gp.getTurnPhaseByName("build")
+        if tp is None:
+            logging.info("no building phase found")
+            return ActionResponse(False, "You cannot cancel trading now")
+        
         t = self.board.getCurrentTrade()
         if t is None:
             logging.info("no current trade in progress")
             return ActionResponse(False, "There is no current trade in progress.")
         
-        if t.colorTo != colorTo:
+        if t.colorTo != p.color:
             logging.info("this player has not had his trade accepted")
             return ActionResponse(False, "You have not had your trade accepted.")
         
@@ -1137,7 +1150,13 @@ class GameState(object):
             logging.info("trade is not in correct state (current state: %s)" % t.state)
             return ActionResponse(False, "This trade has not been accepted yet")
         
-        t.confirmOffer(colorFrom, colorTo)
+        if not t.confirmOffer():
+            logging.info("offer validation failed")
+            return ActionResponse(False, "Could not complete this trade.")
+            
+        self.board.turnPhase = tp.order
+        self.board.currentTradeKey = None
+        self.board.put()
         return ActionResponse(True)
 
     def getCurrentTrade(self):

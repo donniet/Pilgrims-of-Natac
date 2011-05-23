@@ -43,6 +43,8 @@ Action.make = function(str) {
 	case "placeCity": return new Action("Place City", str, Action.RequiredData.VERTEX);
 	case "rollDice": return new Action("Roll Dice", str);
 	case "endTurn": return new Action("End Turn", str);
+	case "startTrade": return new Action("Start Trade", str);
+	case "cancelTrade": return new Action("Cancel Trade", str);
 	case "quit": return new Action("Quit", str);
 	// replace default case with exception
 	default: return new Action(str, str);
@@ -69,8 +71,13 @@ function Board(token, services) {
     this.log_ = new Array();
     
     this.player_ = new Player(services);
+    this.trade_ = new Trade(services);
+    
+    var self = this;
+    Event.addListener(this.player_, "load", function() { self.trade_.load(); })
 }
 Board.prototype.getPlayers = function() { return this.players_; }
+Board.prototype.getTrade = function() { return this.trade_; }
 Board.prototype.getDice = function() { return this.dice_; }
 Board.prototype.getAvailableActions = function() { return this.availableActions_; };
 Board.prototype.getCurrentPlayer = function() { return this.player_; }
@@ -86,6 +93,7 @@ Board.prototype.sendAction = function(action, data) {
 	var self = this;
 	
 	if(data && typeof data.toJSON == "function") { dat = data.toJSON(); }
+	else {dat = data;}
 	
 	jQuery.postJSON(this.actionUrl_, {action:actionName, data:dat}, function(ret) {
 		// action responses are always success, message pairs
@@ -154,7 +162,12 @@ Board.prototype.handleSocketMessage = function(msg) {
     case "updatePlayers":
     	//console.log("updatePlayers");
     	this.loadPlayersJSON(message["players"]);
-    	break;    	
+    	break;
+    case "changeTradeOffer":
+    case "startTrade":
+    case "cancelTrade":
+    	//this.trade_.load();
+    	break;
     case "playerJoinGame":
         throw "Message not yet implemented";
     case "playerLeaveGame":
@@ -209,10 +222,12 @@ Board.prototype.reserve = function(reserveEmail) {
 }
 Board.prototype.load = function() {
 	var self = this;
-	
 	var responder = new Object();
+		
+	//HACK: potential race condition between player and board loading...
+	this.player_.load();
 	
-    jQuery.getJSON(this.boardUrl_, function(data) {
+	jQuery.getJSON(this.boardUrl_, function(data) {
         self.loadJSON(data);
         self.createChannel();
     	
@@ -220,8 +235,8 @@ Board.prototype.load = function() {
         
         Event.fire(self, "load", [this]);
         Event.fire(self, "diceRolled", [self.dice_]);
-    });
-    
+	});
+		
     return responder;
 }
 
@@ -236,6 +251,11 @@ Board.prototype.loadPlayersJSON = function(obj) {
 	
     Event.fire(this, "loadPlayers", [this.getPlayers()]);
 }
+Board.prototype.loadTradeJSON = function(obj) {
+	this.trade_.loadJSON(obj);
+	
+	Event.fire(this, "loadTrade", [this.trade_]);
+}
 
 Board.prototype.loadJSON = function(obj) {
     this.hex_ = new Array();
@@ -247,6 +267,7 @@ Board.prototype.loadJSON = function(obj) {
     var hexdict = new Object();
     
     this.loadPlayersJSON(obj["players"]);
+    this.loadTradeJSON(obj["currentTrade"]);
 
     for(var i = 0; hexes && i < hexes.length; i++) {
 		var h = new Hex(hexes[i]["x"], hexes[i]["y"], hexes[i]["type"], hexes[i]["value"]);

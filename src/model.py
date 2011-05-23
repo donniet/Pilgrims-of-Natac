@@ -18,7 +18,7 @@ def pagedBoards(offset, count):
     return db.Query(Board).fetch(count, offset)
 
 def findBoard(gamekey):
-    logging.info("looking for board %s" % (gamekey,))
+    #logging.info("looking for board %s" % (gamekey,))
     return db.Query(Board).filter('gameKey =', gamekey).get()
 
 def queryBoards(offset, limit, filters, sorting):
@@ -112,29 +112,39 @@ class Trade(db.Model):
     tradeKey = db.StringProperty()
     dateTimeStarted = db.DateTimeProperty()
     dateTimeCompleted = db.DateTimeProperty()
-    state = db.StringProperty()
+    state = db.StringProperty(default="initial")
     colorFrom = db.StringProperty()
     colorTo = db.StringProperty()
     
     def getOffers(self):
-        offers = db.Query(TradeOffer).parent(self).fetch(100)
+        offers = db.Query(TradeOffer).ancestor(self).fetch(100)
         ret = dict()
         for o in offers:
             ret[o.color] = o.getOffer()
             
         return ret
+    
+    def getOffersArray(self):
+        offers = db.Query(TradeOffer).ancestor(self).fetch(100)
+        ret = []
+        for o in offers:
+            ret.append({"color":o.color, "offer":o.getOfferArray()})
+        return ret
 
-    def getOfferByColor(self, color):
-        to = db.Query(TradeOffer).parent(self).filter("color =", color).get()
+    def getOfferDictByColor(self, color):
+        to = db.Query(TradeOffer).ancestor(self).filter("color =", color).get()
         if to is not None:
             return to.getOffer()
+        
+    def getOfferByColor(self, color):
+        return db.Query(TradeOffer).ancestor(self).filter("color =", color).get()
     
     def changeOffer(self, color, resourceDict):
-        db.run_in_transaction(self.__changeOfferTran, color, resourceDict)
+        return db.run_in_transaction(self.__changeOfferTran, color, resourceDict)
+        
     
     def __changeOfferTran(self, color, resourceDict):
-        self.state = None
-        self.colorFrom = None
+        self.state = "initial"
         self.colorTo = None
         self.put()
         to = self.getOfferByColor(color)
@@ -147,59 +157,53 @@ class Trade(db.Model):
             for r,a in resourceDict.items():
                 pr = PlayerResources(parent=to, resource=r, amount=a)
                 pr.put()
+            
+            return True
+        else:
+            return False
     
-    def acceptOffer(self, colorFrom, colorTo):
+    def acceptOffer(self, colorTo):
         self.state = "accepted"
-        self.colorFrom = colorFrom
         self.colorTo = colorTo
         self.put()
         return True
     
-    def confirmOffer(self, colorFrom, colorTo):
-        if self.colorFrom == colorFrom and self.colorTo == colorTo:
-            fromOffer = self.getOfferByColor(colorFrom)
-            toOffer = self.getOfferByColor(colorTo)
-            
-            board = self.parent()
-            playerFrom = board.getPlayerByColor(colorFrom)
-            playerTo = board.getPlayerByColor(colorTo)
-            
-            negFromOffer = dict(map(lambda r,a: (r,-a), fromOffer.items()))
-            negToOffer = dict(map(lambda r,a: (r,-a), toOffer.items()))
-            
-            valid = \
-                playerFrom.adjustResources(negFromOffer, True) and \
-                playerFrom.adjustResources(toOffer, True) and \
-                playerTo.adjustResources(negToOffer, True) and \
-                playerTo.adjustResources(fromOffer, True)
-                
-            if not valid:
-                return False
-            
-            playerFrom.adjustResources(negFromOffer)
-            playerFrom.adjustResources(toOffer)
-            playerTo.adjustResources(negToOffer)
-            playerTo.adjustResources(fromOffer)            
-            
-            self.state = "confirmed"
-            self.dateTimeCompleted = datetime.datetime.now()
-            self.put()            
-            
-            board = self.parent()
-            board.currentTradeKey = None
-            board.put()
-            return True
-        else:
+    def confirmOffer(self):
+        fromOffer = self.getOfferDictByColor(self.colorFrom)
+        toOffer = self.getOfferDictByColor(self.colorTo)
+        
+        board = self.parent()
+        playerFrom = board.getPlayerByColor(self.colorFrom)
+        playerTo = board.getPlayerByColor(self.colorTo)
+        
+        negFromOffer = dict(map(lambda (r,a): (r,-a), fromOffer.items()))
+        negToOffer = dict(map(lambda (r,a): (r,-a), toOffer.items()))
+        
+        validFF = playerFrom.adjustResources(negFromOffer, True)
+        validFT = playerFrom.adjustResources(toOffer, True)
+        validTT = playerTo.adjustResources(negToOffer, True)
+        validTF = playerTo.adjustResources(fromOffer, True)
+        
+        if not (validFF and validFT and validTT and validTF):
+            logging.info("invalid trade: %s, %s, %s, %s" %  (validFF, validFT, validTT, validTF))
+            logging.info("neg offer: %s" % json.dumps(negFromOffer))
+            logging.info("from player resources: %s" % json.dumps(playerFrom.getPlayerResourcesDict()))
             return False
+        
+        playerFrom.adjustResources(negFromOffer)
+        playerFrom.adjustResources(toOffer)
+        playerTo.adjustResources(negToOffer)
+        playerTo.adjustResources(fromOffer)            
+        
+        self.state = "confirmed"
+        self.dateTimeCompleted = datetime.datetime.now()
+        self.put()  
+        return True
         
     def cancel(self):
         self.state = "cancelled"
         self.dateTimeCompleted = datetime.datetime.now()
         self.put()
-        
-        board = self.parent()
-        board.currentTradeKey = None
-        board.put()
         return True
 
 class TradeOffer(db.Model):
@@ -212,6 +216,12 @@ class TradeOffer(db.Model):
         for o in offers:
             ret[o.resource] = o.amount
         
+        return ret
+    def getOfferArray(self):
+        ret = []
+        offers = db.Query(PlayerResources).ancestor(self).fetch(100)
+        for o in offers:
+            ret.append({"resource":o.resource, "amount":o.amount});
         return ret
 
 class Board(db.Model):
@@ -248,9 +258,9 @@ class Board(db.Model):
         self.put(rpc)
     
     def createTrade(self, tradeKey):
-        t = Trade(parent=self, tradeKey=tradeKey, dateTimeStarted=datetime.datetime.now())
+        t = Trade(parent=self, tradeKey=tradeKey, colorFrom=self.getCurrentPlayerColor(), dateTimeStarted=datetime.datetime.now())
         t.put()
-        self.tradeKey = tradeKey
+        self.currentTradeKey = tradeKey
         self.put()
         
         players = self.getPlayers()
@@ -261,10 +271,10 @@ class Board(db.Model):
         return t
     
     def getCurrentTrade(self):
-        return db.Query(Trade).parent(self).filter("tradeKey =", self.tradeKey).get()
+        return db.Query(Trade).ancestor(self).filter("tradeKey =", self.currentTradeKey).get()
     
     def getTradeByKey(self, tradeKey):
-        return db.Query(Trade).parent(self).filter("tradeKey =", tradeKey).get()
+        return db.Query(Trade).ancestor(self).filter("tradeKey =", tradeKey).get()
     
     def getGamePhases(self):
         return db.Query(GamePhase).ancestor(self).order("order").fetch(100)
@@ -370,6 +380,9 @@ class Board(db.Model):
     
     def getPlayer(self, user):
         return db.Query(Player).ancestor(self).filter('user =', user).get()
+    
+    def getPlayerByColor(self, color):
+        return db.Query(Player).ancestor(self).filter('color =', color).get()
     
     def getReservations(self):
         return db.Query(Reservation).ancestor(self).filter("expirationDateTime <", datetime.datetime.now()).fetch(100)
@@ -501,7 +514,18 @@ class Player(db.Model):
             pr.put()
                 
         return True        
-        
+    
+    def getPlayerResources(self):
+        return db.Query(PlayerResources).ancestor(self).fetch(25) 
+    
+    
+    def getPlayerResourcesDict(self):
+        ret = dict()
+        playerResources = db.Query(PlayerResources).ancestor(self).fetch(25)
+        for pr in playerResources:
+             ret[pr.resource] = pr.amount
+            
+        return ret
     
     def adjustResources(self, resource_dict, validate_only=False):
         ret = db.run_in_transaction(self.__adjustResourcesTrans, resource_dict, validate_only)
@@ -521,15 +545,18 @@ class Player(db.Model):
         for pr in playerResources:
             if not rd.get(pr.resource, None) is None: 
                 if pr.amount + rd[pr.resource] < 0:
+                    logging.info("ran out of %s, %i + %i" % (pr.resource, pr.amount, rd[pr.resource]))
                     raise db.Rollback()
                 elif not validate_only:
                     pr.amount += rd[pr.resource]
                     pr.put()
-                    del rd[pr.resource]
+                    
+                del rd[pr.resource]
                 
         # then loop through remaining resources and add them as player resources
         for r, a in rd.items():
             if a < 0:
+                logging.info("ran out of %s" % r)
                 raise db.Rollback()
             elif not validate_only:
                 logging.info("adjusting %s = %d:" % (r, a))
@@ -778,7 +805,7 @@ class BoardEncoder(json.JSONEncoder):
                 state = obj.state,
                 colorFrom = obj.colorFrom,
                 colorTo = obj.colorTo,
-                offers = obj.getOffers(),
+                offers = obj.getOffersArray(),
             )
         elif isinstance(obj, LogEntry):
             return dict(

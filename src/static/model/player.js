@@ -75,5 +75,6 @@ Player.prototype.loadJSON = function (json) {
 }
 Player.prototype.getResources = function() { return this.resources_; }
 Player.prototype.getName = function() { return this.name_; }
+Player.prototype.getColorName = function() { return this.colorName_; }
 
 

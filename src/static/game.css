@@ -36,6 +36,17 @@ body {
 	background-color: #FDFDFD;
 	padding:10px;
 }
+
+.trade-view-players>ul>li {
+	clear:left;
+}
+.trade-view-players ul.resource-view, .trade-view-players .list-player-image {
+	float:left;
+}
+.trade-view-players ul.resource-view {
+	padding:0 10px 0 10px;
+}
+
 ul.resource-view {
 	margin-left:15px;
 	margin-bottom:15px;
