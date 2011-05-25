@@ -86,6 +86,7 @@ function TradeView(element) {
 	
 	this.resourcesDiv_ = null;
 	this.potDiv_ = null;
+	this.bankDiv_ = null;
 }
 TradeView.prototype.setBoard = function(board) {
 	this.board_ = board;
@@ -93,7 +94,7 @@ TradeView.prototype.setBoard = function(board) {
 	
 	var self = this;
 	
-	Event.addListener(this.board_.getCurrentPlayer(), "load", this.renderPlayerResources, this);
+	//Event.addListener(this.board_.getCurrentPlayer(), "load", this.renderPlayerResources, this);
 	Event.addListener(trade, "load", this.renderPot, this);
 	
 	this.render();
@@ -101,18 +102,15 @@ TradeView.prototype.setBoard = function(board) {
 TradeView.prototype.render = function() {
 	this.el_.empty();
 
-	this.resourcesDiv_ = $("<div/>");
+	this.resourcesDiv_ = $("<div class='trade-view-resources'/>");
 	this.el_.append(this.resourcesDiv_);
 	
 
 	this.potDiv_ =  $("<div class='trade-view-players'/>");
 	this.el_.append(this.potDiv_);
-
-	//this.loadPlayerResources(resourcesDiv);
 	
-	//resourcesView.render();
-	
-	//this.renderPot(this.board_.getPlayers(), this.board_.getTrade(), currentPlayer.getColorName());
+	this.bankDiv_ = $("<div class='trade-view-bank-resources'/>");
+	this.el_.append(this.bankDiv_);
 }
 TradeView.prototype.renderPlayerResources = function() {
 	var currentPlayer = this.board_.getCurrentPlayer();
@@ -123,6 +121,7 @@ TradeView.prototype.renderPlayerResources = function() {
 		var pr = playerResources[i];
 		adjustedResources.push({"resource":pr.resource, "amount":pr.amount});
 	}
+	
 	for(var i = 0; i < this.myOffer_.length; i++) {
 		var my = this.myOffer_[i];
 		for(j = 0; j < adjustedResources.length; j++) {
@@ -138,8 +137,21 @@ TradeView.prototype.renderPlayerResources = function() {
 	resourcesView.setResourceArray(adjustedResources);
 	Event.addListener(resourcesView, "resourceclick", this.handleResourceClick, this);
 }
+TradeView.prototype.renderBank = function() {
+	var resources = this.board_.getResources();
+	var ras = new Array();
+	for(var i = 0; i < resources.length; i++) {
+		ras.push({"resource":resources[i], "amount":1});
+	}
+	
+	var resourcesView = new ResourcesView(this.bankDiv_);
+	resourcesView.setResourceArray(ras);
+	Event.addListener(resourcesView, "resourceclick", this.handleBankResourceClick, this);
+}
 
 TradeView.prototype.renderPot = function() {
+	this.renderPlayerResources();
+	
 	var players = this.board_.getPlayers();
 	var trade = this.board_.getTrade();
 	var currentPlayer = this.board_.getCurrentPlayer();
@@ -151,7 +163,10 @@ TradeView.prototype.renderPot = function() {
 	
 	var offers = null;
 	if(trade) offers = trade.getOffers();
-		
+	
+	if(!trade.isTrading_) {
+		this.myOffer_ = new Array();
+	}
 	
 	for(var i = 0; players && i < players.length; i++) {
 		var p = players[i];
@@ -167,7 +182,7 @@ TradeView.prototype.renderPot = function() {
 		
 		span = $("<span/>");
 		
-		var o = offers[p.getColorName()];
+		var o = offers ? offers[p.getColorName()] : null;
 		if(o) {
 			var rv = new ResourcesView(span);
 			rv.setResourceArray(o);
@@ -202,15 +217,46 @@ TradeView.prototype.renderPot = function() {
 		}
 		li.append(span)
 		ul.append(li);
-	}	
+	}
 	
+	var li = $("<li/>");
+	var span = $("<span class='bank-offer-image'/>");
+	var img = $("<img/>");
+	img.attr("width",44);
+	img.attr("height",44);
+	img.attr("src", "/static/i/dollar.jpg");
+	span.append(img);
+	li.append(span);
+	
+	span = $("<span/>");
+	var bankOffer = trade.getBankOffer();
+	
+	var rv = new ResourcesView(span);
+	rv.setResourceArray(bankOffer);
+		
+	if(trade.getColorFrom() == p.getColorName()) {
+		var confirm = $("<a href='javascript:void(0)' class='trade-confirm-offer'><span>Confirm</span></a>");
+		
+		var self = this;
+		confirm.click(function() { self.handleBankOfferConfirm(); });
+		
+		li.append(confirm);
+	}
+	li.append(span);
+	ul.append(li);
+		
 	this.potDiv_.append(ul);
+	
+	this.renderBank();
 }
 TradeView.prototype.handleOfferAccept = function(colorTo) {
 	Event.fire(this, "acceptoffer", [colorTo]);
 }
 TradeView.prototype.handleOfferConfirm = function() {
 	Event.fire(this, "confirmoffer", []);
+}
+TradeView.prototype.handleBankOfferConfirm = function() {
+	Event.fire(this, "confirmbankoffer", []);
 }
 TradeView.prototype.handleResourceRemove = function(resource) {
 	var i = 0;
@@ -242,6 +288,26 @@ TradeView.prototype.handleResourceClick = function(resource) {
 	
 	Event.fire(this, "changeoffer", [this.myOffer_]);
 	
+}
+TradeView.prototype.handleBankResourceClick = function(resource) {
+	console.log("bank resource clicked: " + resource);
+
+	var trade = this.board_.getTrade();
+	var bankOffer = trade.getBankOffer();
+	
+	var i = 0; 
+	for(; i < bankOffer.length; i++) {
+		var ra = bankOffer[i];
+		if(ra.resource == resource) {
+			ra.amount++;
+			break;
+		}
+	}
+	if(i >= bankOffer.length) {
+		bankOffer.push({"resource":resource, "amount":1});
+	}
+	
+	Event.fire(this, "changebankoffer", [bankOffer]);	
 }
 
 function handleLoad() {
@@ -278,6 +344,10 @@ function handleLoad() {
 	actionsView.setBoard(board);
 	actionsView.setBoardView(boardView);
 	
+	Event.addListener(actionsView, "completeaction", function(action, data) {
+		board.sendAction(action, data);
+	});
+	
 	var errorView = new ErrorView($("#errorMessage"));
 	errorView.setBoard(board);
 	
@@ -301,6 +371,16 @@ function handleLoad() {
 		console.log("json(offerDict): " + JSON.stringify(offerDict));
 		board.sendAction("changeTradeOffer", JSON.stringify(offerDict));
 	});
+	Event.addListener(tradeView, "changebankoffer", function(offer) {
+		var offerDict = new Object();
+		for(var i = 0; offer && i < offer.length; i++) {
+			var o = offer[i];
+			offerDict[o.resource] = o.amount;
+		}
+		console.log("offerDict: " + offerDict);
+		console.log("json(offerDict): " + JSON.stringify(offerDict));
+		board.sendAction("changeBankOffer", JSON.stringify(offerDict));
+	});
 
 	Event.addListener(tradeView, "acceptoffer", function(colorTo) {
 		board.sendAction("acceptTradeOffer", colorTo);
@@ -308,6 +388,9 @@ function handleLoad() {
 
 	Event.addListener(tradeView, "confirmoffer", function() {
 		board.sendAction("confirmTradeOffer", null);
+	});
+	Event.addListener(tradeView, "confirmbankoffer", function() {
+		board.sendAction("confirmBankOffer", null);
 	});
 		
 	layout.addItem($("#trade"), "left", 100, true);	

@@ -69,6 +69,7 @@ function Board(token, services) {
     this.dice_ = new Array();
     this.availableActions_ = new Array();
     this.log_ = new Array();
+    this.resources_ = new Array();
     
     this.player_ = new Player(services);
     this.trade_ = new Trade(services);
@@ -81,6 +82,7 @@ Board.prototype.getTrade = function() { return this.trade_; }
 Board.prototype.getDice = function() { return this.dice_; }
 Board.prototype.getAvailableActions = function() { return this.availableActions_; };
 Board.prototype.getCurrentPlayer = function() { return this.player_; }
+Board.prototype.getResources = function() { return this.resources_; }
 
 Board.prototype.sendAction = function(action, data) {	
 	var responder = new Object();
@@ -162,6 +164,7 @@ Board.prototype.handleSocketMessage = function(msg) {
     case "updatePlayers":
     	//console.log("updatePlayers");
     	this.loadPlayersJSON(message["players"]);
+    	this.player_.load();
     	break;
     case "changeTradeOffer":
     case "startTrade":
@@ -203,7 +206,7 @@ Board.prototype.handleSocketMessage = function(msg) {
     
     //console.log("available actions: " + this.availableActions_.length);
     //TODO: only update player when needed or when asked
-    this.player_.load();
+    //this.player_.load();
 }
 
 Board.prototype.reserve = function(reserveEmail) {
@@ -268,6 +271,11 @@ Board.prototype.loadJSON = function(obj) {
     
     this.loadPlayersJSON(obj["players"]);
     this.loadTradeJSON(obj["currentTrade"]);
+    
+    var resources = obj["resources"];
+    for(var i = 0; resources && i < resources.length; i++) {
+    	this.resources_.push(resources[i]);
+    }
 
     for(var i = 0; hexes && i < hexes.length; i++) {
 		var h = new Hex(hexes[i]["x"], hexes[i]["y"], hexes[i]["type"], hexes[i]["value"]);

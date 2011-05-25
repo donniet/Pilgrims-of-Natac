@@ -19,6 +19,7 @@ Trade.prototype.getOffers = function() { return this.offers_; }
 Trade.prototype.getState = function() { return this.state_; }
 Trade.prototype.getColorTo = function() { return this.colorTo_; }
 Trade.prototype.getColorFrom = function() { return this.colorFrom_; }
+Trade.prototype.getBankOffer = function() { return this.bankOffer_; }
 Trade.prototype.load = function() {
 	var responder = new Object();
 	
@@ -35,7 +36,6 @@ Trade.prototype.load = function() {
 	});
 }
 Trade.prototype.loadJSON = function(json) {
-	
 	if(!json) {
 		this.tradeKey_ = null;
 		this.dateTimeStarted_ = null;
@@ -47,6 +47,7 @@ Trade.prototype.loadJSON = function(json) {
 		this.isTrading_ = false;
 		
 		this.offers_ = new Object();
+		this.bankOffer_ = new Array();
 	}
 	else {
 		console.log("loading from a valid json object.  offers: " + json.offers);
@@ -61,7 +62,15 @@ Trade.prototype.loadJSON = function(json) {
 		this.offers_ = new Object();
 		for(var i = 0; json.offers && i < json.offers.length; i++) {
 			var o = json.offers[i];
-			this.offers_[o.color] = o.offer;
+			if(o.is_bank) {
+				this.bankOffer_ = o.offer;
+			}
+			else if(o.color) {
+				this.offers_[o.color] = o.offer;
+			}
+			else {
+				//TODO: handle this, there was a problem
+			}
 		}
 	}
 	Event.fire(this, "load", []);

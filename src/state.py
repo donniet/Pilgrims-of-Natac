@@ -499,12 +499,18 @@ class GameState(object):
         elif action == "changeTradeOffer":
             ret = self.changeTradeOffer(user, data)
             logmessage = "changed trade offer"
+        elif action == "changeBankOffer":
+            ret = self.changeBankOffer(user, data)
+            logmessage = "changed trade offer"
         elif action == "acceptTradeOffer":
             ret = self.acceptTradeOffer(user, data)
             logmessage = "acceptTradeOffer"
         elif action == "confirmTradeOffer":
             ret = self.confirmTradeOffer(user)
-            logmessage = "confirm trade offer"        
+            logmessage = "confirm trade offer"  
+        elif action == "confirmBankOffer":
+            ret = self.confirmBankOffer(user)
+            logmessage = "confirm bank offer"       
         elif action == "chat":
             self.board.log("chat", data, user)
             color = self.board.getPlayer(user).color
@@ -800,10 +806,12 @@ class GameState(object):
                 return ActionResponse(False, "You cannot build a road now.")
             else:
                 cost = self.board.getDevelopmentTypeCost("road")
-                for r in cost:
-                    cost[r] = -cost[r]
+                
+                logging.info("a road costs: %s" % json.dumps(cost))
+                
+                negCost = dict(map(lambda (r,a): (r,-a), cost.items()))
                     
-                if not p.adjustResources(cost):
+                if not p.adjustResources(negCost):
                     logging.info("not enough resources to build road.")
                     return ActionResponse(False, "You do not have enough resources to build a road.")
                 
@@ -1078,6 +1086,36 @@ class GameState(object):
         
         return ActionResponse(True)
     
+    def changeBankOffer(self, user, resourceDict):
+        p = self.board.getPlayer(user)
+        if p == None: 
+            return ActionResponse(False, "You are not a player in this game")
+        
+        gp = self.board.getCurrentGamePhase()
+        tp = self.board.getCurrentTurnPhase()
+        if gp is None or tp is None:
+            return ActionResponse(False, "Error: The game has not started or is in the incorrect phase.")
+        
+        if gp.phase != "main" or tp.phase != "trade":
+            logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
+            return ActionResponse(False, "There is no trade in progress.")
+        
+        t = self.board.getCurrentTrade()
+        if t is None:
+            logging.info("no current trade in progress")
+            return ActionResponse(False, "There is no current trade in progress.")
+        
+        if p.color != t.colorFrom:
+            logging.info("not the current player")
+            return ActionResponse(False, "You are not the trading player.")
+        
+        ret = t.changeBankOffer(resourceDict)
+        if not ret:
+            logging.info("could not change the bank's offer.")
+            return ActionResponse(False, "There was a problem changing the bank's offer")
+        
+        return ActionResponse(True)
+
     def acceptTradeOffer(self, user, colorTo):
         p = self.board.getPlayer(user)
         if p == None: 
@@ -1151,6 +1189,42 @@ class GameState(object):
             return ActionResponse(False, "This trade has not been accepted yet")
         
         if not t.confirmOffer():
+            logging.info("offer validation failed")
+            return ActionResponse(False, "Could not complete this trade.")
+            
+        self.board.turnPhase = tp.order
+        self.board.currentTradeKey = None
+        self.board.put()
+        return ActionResponse(True)
+    
+    def confirmBankOffer(self, user):
+        p = self.board.getPlayer(user)
+        if p == None: 
+            return ActionResponse(False, "You are not a player in this game")
+        
+        gp = self.board.getCurrentGamePhase()
+        tp = self.board.getCurrentTurnPhase()
+        if gp is None or tp is None:
+            return ActionResponse(False, "Error: The game has not started or is in the incorrect phase.")
+        
+        if gp.phase != "main" or tp.phase != "trade":
+            logging.info("not in the correct phase (currentPhase: %s)" % tp.phase)
+            return ActionResponse(False, "There is no trade in progress.")
+        
+        tp = gp.getTurnPhaseByName("build")
+        if tp is None:
+            logging.info("no building phase found")
+            return ActionResponse(False, "You cannot cancel trading now")
+        
+        t = self.board.getCurrentTrade()
+        if t is None:
+            logging.info("no current trade in progress")
+            return ActionResponse(False, "There is no current trade in progress.")
+        
+        #TODO: rules for bank trades: 4:1 always
+        #TODO: port rules
+        
+        if not t.confirmBankOffer():
             logging.info("offer validation failed")
             return ActionResponse(False, "Could not complete this trade.")
             
