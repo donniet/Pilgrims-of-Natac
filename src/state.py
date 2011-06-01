@@ -87,6 +87,15 @@ class BoardTemplate(object):
         
         board.put()
         
+        fourForOneRule = model.TradingRule(parent=board, name="4 for 1")
+        fourForOneRule.put();
+        
+        fourMatch = model.TradeMatch(parent=fourForOneRule, any=True, count=4, to=False)
+        fourMatch.put()
+        
+        oneMatch = model.TradeMatch(parent=fourForOneRule, any=True, count=1, to=True)
+        oneMatch.put()
+        
         for d in self.developments:
             dt = model.DevelopmentType(parent=board, location=d["location"], name=d["name"], points=d["points"], playerStart=d["playerStart"])
             dt.put()
@@ -501,7 +510,7 @@ class GameState(object):
             logmessage = "changed trade offer"
         elif action == "changeBankOffer":
             ret = self.changeBankOffer(user, data)
-            logmessage = "changed trade offer"
+            logmessage = "changed bank offer"
         elif action == "acceptTradeOffer":
             ret = self.acceptTradeOffer(user, data)
             logmessage = "acceptTradeOffer"
@@ -1221,6 +1230,43 @@ class GameState(object):
             logging.info("no current trade in progress")
             return ActionResponse(False, "There is no current trade in progress.")
         
+        if p.color != t.colorFrom:
+            logging.info("not the trading player.")
+            return ActionResponse(False, "You are not the trading player.")
+        
+        tradingRules = self.getTradingRules(self.board, p)
+        
+        #logging.info("processing trading rule combinations...")
+        
+        found = False
+        for (df, dt) in self.recurseThroughTradingRuleCombinations(tradingRules, t.getOfferDictByColor(p.color), t.getBankOfferDict()):
+            validFrom = True
+            for (r,a) in df.items():
+                #logging.info("remaining From %s: %d" % (r,a))
+                if a != 0:
+                    validFrom = False
+                    break
+            
+            if not validFrom:
+                continue
+            
+            validTo = True
+            for (r,a) in dt.items():
+                #logging.info("remaining To %s: %d" % (r,a))
+                if a != 0:
+                    validTo = False
+                    break
+            
+            if validFrom and validTo:
+                found = True
+                break
+            
+        #logging.info("done processing trading rule combos.")
+        
+        if not found:
+            logging.info("no trading rule combination allowed the trade")
+            return ActionResponse(False, "The trade is not allowed.")                
+        
         #TODO: rules for bank trades: 4:1 always
         #TODO: port rules
         
@@ -1232,6 +1278,19 @@ class GameState(object):
         self.board.currentTradeKey = None
         self.board.put()
         return ActionResponse(True)
+
+    def recurseThroughTradingRuleCombinations(self, rules, resource_dict_from, resource_dict_to):
+        for rule in rules:
+            for (df,dt) in rule.matches(resource_dict_from, resource_dict_to):
+                yield (df,dt)
+                
+                for (df2, dt2) in self.recurseThroughTradingRuleCombinations(rules, df, dt):
+                    yield (df2, dt2)
+                
+
+    def getTradingRules(self, board, player):
+        #TODO: add port, merchant, and any other trading rules here
+        return self.board.getDefaultTradingRules()
 
     def getCurrentTrade(self):
         return self.board.getCurrentTrade()

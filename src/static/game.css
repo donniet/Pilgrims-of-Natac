@@ -37,10 +37,10 @@ body {
 	padding:10px;
 }
 
-.trade-view-players>ul>li {
+.trade-view-players>ul>li, .trade-view-bank-resources {
 	clear:left;
 }
-.trade-view-players ul.resource-view, .trade-view-players .list-player-image {
+.trade-view-players ul.resource-view, .trade-view-players .list-player-image, .bank-offer-image {
 	float:left;
 }
 .trade-view-players ul.resource-view {

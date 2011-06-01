@@ -12,6 +12,7 @@ from google.appengine.api import users
 import urllib
 import hashlib
 import util
+from copy import copy
 
 
 def pagedBoards(offset, count):
@@ -78,6 +79,60 @@ def queryBoards(offset, limit, filters, sorting):
 
 GamePhases = util.enum('GamePhases', 'join', 'buildFirst', 'buildSecond', 'main')
 TurnPhases = util.enum('TurnPhases', 'buildInitialSettlement', 'buildInitialRoad', 'playKnightCard', 'mainTurn')
+
+
+# this is pretty complex-- lots of yields...
+class TradeMatch(db.Model):
+    resource = db.StringProperty(default=None)
+    count = db.IntegerProperty(default=0)
+    any = db.BooleanProperty(default=False)
+    to = db.BooleanProperty(default=False) # default to from   
+    
+    # yields an adjusted resource_dict
+    def adjusted(self, resource_dict, neg = True):
+        for (r,a) in resource_dict.items():
+            #logging.info("trying to adjust resource: %s (%d) by %d" % (r,a, self.count))
+            if (self.any or self.resource == r) and \
+                ((neg and self.count <= a) or (not neg and self.count + a >= 0)):
+                ret = copy(resource_dict)
+                if neg:
+                    ret[r] = a - self.count
+                else:
+                    ret[r] = a + self.count
+                yield ret
+
+class TradingRule(db.Model):
+    name = db.StringProperty()
+    
+    def adjustAllRules(self, matchRules, resource_dict, neg = True):
+        if len(matchRules) == 0:
+            return
+        
+        rule = matchRules[0]
+        others = matchRules[1:]
+        
+        for d in rule.adjusted(resource_dict, neg):
+            if len(others) > 0:
+                for d2 in self.adjustAllRules(others, d, neg):
+                    yield d2
+            else:
+                yield d
+                
+    def matches(self, resource_dict_from, resource_dict_to):
+        fromMatchRules = db.Query(TradeMatch).ancestor(self).filter("to =", False).order("count").fetch(100)
+        toMatchRules = db.Query(TradeMatch).ancestor(self).filter("to =", True).order("-count").fetch(100)
+        
+        for df in self.adjustAllRules(fromMatchRules, resource_dict_from):
+            # we could remove from the "to" pile
+            for dt in self.adjustAllRules(toMatchRules, resource_dict_to):
+                yield (df, dt)
+                
+            # or we could add to the "from" pile
+            # I actually can't think of a time when you'd want to re-trade something you just traded the bank for...
+            # commenting this out...  It's expensive and doesn't really add very much...
+            #for df2 in self.adjustAllRules(toMatchRules, df, False):
+            #    yield (df2, resource_dict_to)
+        
 
 
 class TurnPhase(db.Model):
@@ -310,6 +365,9 @@ class Board(db.Model):
         
     def getLogEntries(self, limit, offset):
         return db.Query(LogEntry).ancestor(self).order("-dateTime").fetch(limit, offset)
+    
+    def getDefaultTradingRules(self):
+        return db.Query(TradingRule).ancestor(self).fetch(100)
     
     def save(self, callback):
         rpc = db.create_rpc(deadline=5, callback=callback)

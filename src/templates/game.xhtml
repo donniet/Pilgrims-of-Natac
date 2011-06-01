@@ -234,7 +234,9 @@ TradeView.prototype.renderPot = function() {
 	var rv = new ResourcesView(span);
 	rv.setResourceArray(bankOffer);
 		
-	if(trade.getColorFrom() == p.getColorName()) {
+	if(trade.getColorFrom() == currentColor) {
+		Event.addListener(rv, "resourceclick", this.handleBankResourceRemove, this);
+		
 		var confirm = $("<a href='javascript:void(0)' class='trade-confirm-offer'><span>Confirm</span></a>");
 		
 		var self = this;
@@ -271,6 +273,27 @@ TradeView.prototype.handleResourceRemove = function(resource) {
 	if(i < this.myOffer_.length)
 		Event.fire(this, "changeoffer", [this.myOffer_]);
 }
+TradeView.prototype.handleBankResourceRemove = function(resource) {
+	var trade = this.board_.getTrade();
+	
+	if(!trade) return;
+	var bankOffer = trade.getBankOffer();
+	
+	if(!bankOffer) return;
+	var i = 0;
+	for(; i < bankOffer.length; i++) {
+		var ra = bankOffer[i];
+		if(ra.resource == resource && ra.amount > 0) {
+			ra.amount--;
+			break;
+		}
+	}
+	
+	if(i < bankOffer.length)
+		Event.fire(this, "changebankoffer", [bankOffer]);
+		
+}
+	
 
 TradeView.prototype.handleResourceClick = function(resource) {
 	console.log("resource clicked: " + resource);
