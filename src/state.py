@@ -1282,8 +1282,10 @@ class GameState(object):
     def recurseThroughTradingRuleCombinations(self, rules, resource_dict_from, resource_dict_to):
         for rule in rules:
             for (df,dt) in rule.matches(resource_dict_from, resource_dict_to):
+                # maybe applying the rule once will work?
                 yield (df,dt)
                 
+                # if not, keep going through all other combinations
                 for (df2, dt2) in self.recurseThroughTradingRuleCombinations(rules, df, dt):
                     yield (df2, dt2)
                 
