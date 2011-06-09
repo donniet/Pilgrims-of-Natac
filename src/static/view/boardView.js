@@ -9,6 +9,7 @@ function BoardView(boardElement, modelElements, options) {
 	this.vertexDevListener_ = null;
 	this.edgeDevListener_ = null;
 	this.loadListener_ = null;
+	this.scale_ = 1.0;
 	
 	this.modelElements_ = new Object();
 	for(var i = 0; modelElements && i < modelElements.length; i++) {
@@ -89,10 +90,33 @@ BoardView.prototype.c = function (/* int */nx, /* int */ny) {
         "y": fy + this.marginTop_
     };
 }
+BoardView.prototype.handleMouseWheel = function(e) {
+	var delta = 0;
+	if(e.detail) {
+		delta = -e.detail/3;
+	}
+	
+	if(delta != 0) {
+		this.scale_ *= Math.pow(1.2, delta);
+		this.boardElement_.setAttribute("transform", "scale(" + this.scale_ + "," + this.scale_ + ")");
+	}
+	
+	if (e.preventDefault)
+        e.preventDefault();
+	e.returnValue = false;
+}
 BoardView.prototype.renderBoard = function (svgEl) {
     this.renderHexes(svgEl);
     this.renderEdges(svgEl);
     this.renderVertexes(svgEl);
+    
+    var self = this;
+    if(window.addEventListener) 
+    	window.addEventListener('DOMMouseScroll', function(e) {self.handleMouseWheel(e);}, false);
+    
+    window.onmousewheel = function(e) { self.handleMouseWheel(e); };
+    
+    
 }
 BoardView.prototype.renderVertexes = function (svgEl) {
     for (var i = 0; i < this.board_.vertex_.length; i++) {

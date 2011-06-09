@@ -687,6 +687,15 @@ class Player(db.Model):
                 pr.put()
                 
         return True
+    
+    def getTotalResources(self):
+        playerResources = db.Query(PlayerResources).ancestor(self).fetch(1000)
+            
+        totalResources = 0
+        for pr in playerResources:
+            totalResources += pr.amount
+            
+        return totalResources
     #TODO: Development Cards
 
 def userPicture(email):
@@ -957,7 +966,7 @@ class BoardEncoder(json.JSONEncoder):
                 user = dict(nickname=obj.user.nickname(), email=obj.user.email()),
                 # don't return all the resources with the board
                 #playerResources = db.Query(PlayerResources).ancestor(obj),
-                totalResources = len(playerResources),
+                totalResources = obj.getTotalResources(),
                 userpicture = userPicture(obj.user.email()),
                 score = obj.score,
                 order = obj.order,
