@@ -9,6 +9,7 @@ function ActionsView(actionsElement) {
 	this.eventHandlerId = null;
 	
 	this.boardView_ = null;
+	this.resourceView_ = null;
 	this.actionsChangedHandlerId_ = null;
 	this.loadListenerId_ = null;
 	
@@ -22,6 +23,10 @@ ActionsView.prototype.setBoardView = function(boardView) {
 	Event.addListener(this.boardView_, "vertexclick", function(vertex, evt) { self.handleBoardClick(Action.RequiredData.VERTEX, vertex, evt); });
 	Event.addListener(this.boardView_, "edgeclick", function(edge, evt) { self.handleBoardClick(Action.RequiredData.EDGE, edge, evt); });
 	Event.addListener(this.boardView_, "hexclick", function(hex, evt) { self.handleBoardClick(Action.RequiredData.HEX, hex, evt); });
+}
+ActionsView.prototype.setResourceView = function(resourceView) {
+	var self = this;
+	this.resourceView_ = resourceView;
 }
 ActionsView.prototype.setBoard = function(board) {
 	var self = this;
@@ -216,6 +221,11 @@ ActionsView.prototype.createClickHandler = function(action) {
 			break;
 		case Action.RequiredData.VERTEX:
 			eventName = "vertexclick";
+			break;
+		case Action.RequiredData.RESOURCESET:
+			return function() {
+				self.handleCompleteAction(action, self.resourceView_.getSelectedResources());
+			}
 			break;
 		default:
 			return function() { self.handleCompleteAction(action); };

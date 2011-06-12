@@ -337,6 +337,23 @@ class TradeOffer(db.Model):
             ret.append({"resource":o.resource, "amount":o.amount});
         return ret
 
+class Discard(db.Model):
+    discardKey = db.StringProperty()
+    dateTimeStarted = db.DateTimeProperty()
+    dateTimeEnded = db.DateTimeProperty()
+    
+    def getPlayerDiscardsByColor(self, color):
+        return db.Query(PlayerDiscard).ancestor(self).filter("color =", color).get()
+    
+    def getPlayerDiscards(self):
+        return db.Query(PlayerDiscard).ancestor(self).fetch(100)
+        
+
+class PlayerDiscard(db.Model):
+    color = db.StringProperty()
+    requiredDiscards = db.IntegerProperty()
+    discardComplete = db.BooleanProperty(default=False)
+
 class Board(db.Model):
     dateTimeCreated = db.DateTimeProperty()
     dateTimeStarted = db.DateTimeProperty()
@@ -357,6 +374,7 @@ class Board(db.Model):
     pointsNeededToWin = db.IntegerProperty()
     stateKey = db.StringProperty()
     currentTradeKey = db.StringProperty()
+    currentDiscardKey = db.StringProperty()
     resourceMap = None
     
     def log(self, type, message, actor=None):
@@ -372,6 +390,19 @@ class Board(db.Model):
     def save(self, callback):
         rpc = db.create_rpc(deadline=5, callback=callback)
         self.put(rpc)
+        
+    def createDiscard(self, discardKey, playerDiscardMap):
+        d = Discard(parent=self, discardKey=discardKey, dateTimeStarted=datetime.datetime.now())
+        d.put()
+        self.currentDiscardKey = discardKey
+        self.put()
+        
+        for color,amount in playerDiscardMap.items():
+            pd = PlayerDiscard(parent=d, color=color, requiredDiscards=amount, discardComplete=(amount==0))
+            pd.put()
+            
+    def getCurrentDiscard(self):
+        return db.Query(Discard).ancestor(self).filter("discardKey =", self.currentDiscardKey).get()
     
     def createTrade(self, tradeKey):
         t = Trade(parent=self, tradeKey=tradeKey, colorFrom=self.getCurrentPlayerColor(), dateTimeStarted=datetime.datetime.now())
@@ -722,7 +753,11 @@ class Hex(db.Model):
     def addDevelopment(self, color, type):
         d = Development(parent=self, color=color, type=type)
         d.put()
-        return d  
+        return d
+    
+    def removeDevelopment(self, dev):
+        dev.delete()
+        pass
     
     def getAdjecentVertexes(self):
         ret = []

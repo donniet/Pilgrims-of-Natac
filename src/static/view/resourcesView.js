@@ -22,6 +22,7 @@ ResourcesView.prototype.setResourceArray = function(resourceArray) {
 }
 ResourcesView.prototype.renderPlayer = function() {	
 	this.resources_ = this.player_.getResources();
+	this.selectedResources_ = new Array();
 	this.render();
 }
 ResourcesView.prototype.clearSelectedResources = function() {
@@ -55,34 +56,33 @@ ResourcesView.prototype.setSelectMode = function(mode) {
 	this.clearSelectedResources();
 	Event.fire(this, "setselectmode", [mode]);
 }
-ResourcesView.prototype.handleResourceClick = function(resource, span) {
+ResourcesView.prototype.handleResourceClick = function(resource, li) {
 	switch(this.selectMode_) {
 	case ResourcesView.SelectMode.One:
 		Event.fire(self, "resourceclick", [resource]);
 		break;
 	case ResourcesView.SelectMode.Many:
-		if(!span.__selected) {
-			var obj = {"resource":resource, "span":span};
+		if(!li.__selected) {
+			var obj = {"resource":resource, "li":li};
 			this.selectedResources_.push(obj);
-			span.addClass("resource-view-resource-selected");
-			span.__selected = obj;
+			li.addClass("resource-view-resource-selected");
+			li.__selected = obj;
 		}
 		else {
-			//TODO: add unselect code
 			var sr = new Array();
 			
 			var i = 0;
 			for(; i < this.selectedResources_.length; i++) {
 				var s = this.selectedResources_[i];
-				if(s.span !== span) {
+				if(s.li !== li) {
 					sr.push(s);
 				} 
 				delete this.selectedResources_[i];
 			}
 			delete this.selectedResources_;
 			this.selectedResources_ = sr;
-			span.__selected = null;
-			span.removeClass("resource-view-resource-selected");
+			li.__selected = null;
+			li.removeClass("resource-view-resource-selected");
 		}
 		break;
 	default:
@@ -100,10 +100,11 @@ ResourcesView.prototype.render = function(resources) {
 		for(var j = 0; j < r.amount; j++) {
 			var li = $("<li/>");
 			var resource = $("<span/>");
-			li.click(function(r) { 
-				return function() {  
+			li.click(function(resource, li) { 
+				return function() { 
+					self.handleResourceClick(resource, li);
 				}	
-			}(r.resource));
+			}(r.resource, li));
 			resource.addClass("resource-view-" + r.resource);
 			var textSpan = $("<span/>");
 			textSpan.text(r.resource);

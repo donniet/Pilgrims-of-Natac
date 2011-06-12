@@ -128,10 +128,11 @@ class ActionHandler(webapp.RequestHandler):
                 
         action = self.request.get("action")
         data = self.request.get("data")
-        logging.info("data: " + self.request.get("data"))
         try: 
+            logging.info("data: " + self.request.get("data"))
             data = json.loads(self.request.get("data"))
         except:
+            logging.info("exception!")
             pass
         
         s = get_live_game(gamekey)        

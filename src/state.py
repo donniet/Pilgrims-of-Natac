@@ -334,6 +334,12 @@ class GameState(object):
         elif action == "endTurn":
             ret = self.endTurn(user)
             logmessage = "ended turn"
+        elif action == "discard":
+            ret = self.discard(user, data)
+            logmessage = "discarded"
+        elif action == "placeRobber":
+            ret = self.placeRobber(user, data["x"], data["y"])
+            logmessage = "placed robber"
         elif action == "startTrade":
             ret = self.startTrade(user)
             logmessage = "started trading"
@@ -396,11 +402,13 @@ class GameState(object):
         
         for d in ad:
             dt = dts[d.type]
-            if dt is None:
+            if dt.points == 0 or d.color is None:
+                continue
+            elif dt is None:
                 logging.info("ERROR: development type not found '%s'" % d.type)
             elif scores.get(d.color, None) is None:
                 logging.info("ERROR: player color not found '%s'" % d.color)
-            else:
+            elif d.color is not None:
                 scores[d.color] += dt.points
                 
         #TODO: other ways you can get points, aka Longest Road, Largest Army
@@ -436,15 +444,20 @@ class GameState(object):
                 actions.append("placeSettlement")
             elif turnPhase == "buildRoad":
                 actions.append("placeRoad")
-        elif gamePhase == "main" and player is not None and player.color == currentColor:
-            if turnPhase == "rollDice":
+        elif gamePhase == "main" and player is not None:
+            if turnPhase == "rollDice" and player.color == currentColor:
                 actions.append("rollDice")
-            elif turnPhase == "moveRobber":
+            elif turnPhase == "moveRobber" and player.color == currentColor:
                 actions.append("placeRobber")
-            elif turnPhase == "playCard" or turnPhase == "build":
+            elif turnPhase == "playCard" or turnPhase == "build" and player.color == currentColor:
                 actions.extend(["cancelTrade", "startTrade", "playCard", "placeSettlement", "placeCity", "placeRoad","endTurn"])
-            elif turnPhase == "trade":
+            elif turnPhase == "trade" and player.color == currentColor:
                 actions.extend(["cancelTrade"])
+            elif turnPhase == "discard":
+                d = self.board.getCurrentDiscard()
+                pd = d.getPlayerDiscardsByColor(player.color)
+                if pd.requiredDiscards > 0 and not pd.discardComplete:
+                    actions.extend(["discard"])
         elif gamePhase == "complete":
             pass
         return actions
@@ -475,6 +488,69 @@ class GameState(object):
         self.board.moveNextPlayer()
         self.board.turnPhase = 0
         self.board.put()
+        return ActionResponse(True)
+    
+    def discard(self, user, resources):
+        p = self.board.getPlayer(user)
+        if p is None: 
+            logging.info("player not found %s." % user)
+            return ActionResponse(False, "You are not a player in this game.")
+        
+        tp = self.board.getCurrentTurnPhase()
+        
+        if tp.phase != "discard":
+            logging.info("incorrect phase to discard")
+            return ActionResponse(False, "You cannot discard right now.")
+        
+        d = self.board.getCurrentDiscard()
+        if d is None:
+            logging.info("no discard in progress")
+            return ActionResponse(False, "You cannot discard right now.")
+        
+        pd = d.getPlayerDiscardsByColor(p.color)
+        if pd is None or pd.requiredDiscards == 0:
+            logging.info("player does not have to discard")
+            return ActionResponse(False, "You do not have to discard any cards.")
+        
+        if pd.discardComplete:
+            logging.info("player already discarded")
+            return ActionResponse(False, "You have already discarded")
+        
+        
+        
+        sum = 0
+        resourceDict = dict()
+        logging.info("resources: %s" % resources)
+        for r in resources:
+            logging.info("resource: %s, amount: %i" % (r["resource"], r["amount"]))
+            sum += r["amount"]
+            resourceDict[r["resource"]] = -r["amount"]
+        
+        logging.info("sum: %i" % sum)
+        if pd.requiredDiscards != sum:
+            logging.info("player discarded incorrect amount")
+            return ActionResponse(False, "You must discard %i cards." % pd.requiredDiscards)
+        
+        ret = p.adjustResources(resourceDict)
+        if not ret:
+            logging.info("player cannot discard specified resources")
+            return ActionResponse(False, "You do not have the resources you tried to discard.")
+        
+        pd.discardComplete = True
+        pd.put()
+        
+        discards = d.getPlayerDiscards()
+        discardsComplete = True
+        for d in discards:
+            if not d.discardComplete:
+                discardsComplete = False
+                break
+            
+        if discardsComplete:
+            tp = self.board.getCurrentGamePhase().getTurnPhaseByName("moveRobber")
+            self.board.turnPhase = tp.order
+            self.board.put()
+            
         return ActionResponse(True)
     
     def rollDice(self, user):
@@ -522,11 +598,10 @@ class GameState(object):
                     if tr % 2 == 0:
                         discardCount = tr / 2
                     else:
-                        discardCount = (tr+1) / 2
+                        discardCount = (tr-1) / 2
                          
                     playerDiscardMap[p.color] = discardCount
                     mustDiscard = True
-                    self.sendMessageUser(p.user, {"action":"discard", "data":discardCount})
                 else:
                     playerDiscardMap[p.color] = 0
             
@@ -534,6 +609,8 @@ class GameState(object):
             if mustDiscard: 
                 tp = self.board.getCurrentGamePhase().getTurnPhaseByName("discard")
                 self.board.turnPhase = tp.order
+                discardKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(16))
+                self.board.createDiscard(discardKey, playerDiscardMap)
             else:
                 tp = self.board.getCurrentGamePhase().getTurnPhaseByName("moveRobber")
                 self.board.turnPhase = tp.order
@@ -544,6 +621,16 @@ class GameState(object):
             # distribute resources
             hx = self.board.getHexesByValue(sum)
             for h in hx:
+                hd = h.getDevelopments()
+                robber = False
+                for d in hd:
+                    if d.type == "robber":
+                        robber = True
+                        break;
+                    
+                if robber:
+                    continue
+                
                 resource = self.board.getResourceByHexType(h.type)
                 vx = h.getAdjecentVertexes()
                 for v in vx:
@@ -701,6 +788,50 @@ class GameState(object):
         def x():
             self.sendMessageAll(message)
         return x
+    
+    def placeRobber(self, user, x, y):
+        p = self.board.getPlayer(user)
+        if p is None: 
+            logging.info("player not found %s." % (user,))
+            return ActionResponse(False, "You are not a player in this game")
+           
+        color = p.color
+        if self.board.getCurrentPlayerColor() != color:
+            logging.info("not player turn %s." % user)
+            return ActionResponse(False, "It is not your turn.")
+        
+        gp = self.board.getCurrentGamePhase()
+        tp = self.board.getCurrentTurnPhase()
+        if gp is None or tp is None:
+            return ActionResponse(False, "Error: The game has not started or is in the incorrect phase.")
+        
+        if tp.phase != "moveRobber":
+            logging.info("incorrect turn phase, should be 'moveRobber'")
+            return ActionResponse(False, "You cannot move the robber right now.")
+        
+        h = self.board.getHex(x, y)
+        if h is None:
+            logging.info("hex %d,%d not found." % (x,y))
+            return ActionResponse(False, "Error: The hex you selected is not found on this board.")
+        
+        devs = h.getDevelopments()
+        if devs and len(devs) > 0:
+            return ActionResponse(False, "There is already a development on this hex.")
+        
+        hexes = self.board.getHexes()
+        for hex in hexes:
+            devs = hex.getDevelopments()
+            for d in devs:
+                if d.type == "robber":
+                    d.delete()
+        
+        h.addDevelopment(None, "robber")
+        
+        tp = gp.getTurnPhaseByName("build")
+        self.board.turnPhase = tp.order
+        self.board.put()
+        
+        return ActionResponse(True)        
     
     def placeSettlement(self, x, y, user):
         #logging.info("placeSettlement: " + data)

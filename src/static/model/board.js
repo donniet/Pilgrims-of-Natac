@@ -23,7 +23,6 @@ DictList.prototype.get = function(key) {
 }
 
 
-
 function Action(displayText, actionName, requiredData) {
 	this.displayText = displayText;
 	this.actionName = actionName;
@@ -32,7 +31,9 @@ function Action(displayText, actionName, requiredData) {
 Action.RequiredData = {
 	"HEX":"HEX",
 	"EDGE":"EDGE",
-	"VERTEX":"VERTEX"
+	"VERTEX":"VERTEX",
+	"RESOURCESET":"RESOURCESET",
+	"RESOURCE":"RESOURCE"
 };
 //TODO: send this information from the server
 Action.make = function(str) {
@@ -46,6 +47,8 @@ Action.make = function(str) {
 	case "startTrade": return new Action("Start Trade", str);
 	case "cancelTrade": return new Action("Cancel Trade", str);
 	case "quit": return new Action("Quit", str);
+	case "discard": return new Action("Discard", str, Action.RequiredData.RESOURCESET);
+	case "placeRobber": return new Action("Place Robber", str, Action.RequiredData.HEX);
 	// replace default case with exception
 	default: return new Action(str, str);
 	}
@@ -95,7 +98,7 @@ Board.prototype.sendAction = function(action, data) {
 	var self = this;
 	
 	if(data && typeof data.toJSON == "function") { dat = data.toJSON(); }
-	else {dat = data;}
+	else {dat = JSON.stringify(data);}
 	
 	jQuery.postJSON(this.actionUrl_, {action:actionName, data:dat}, function(ret) {
 		// action responses are always success, message pairs
@@ -143,6 +146,8 @@ Board.prototype.handleSocketMessage = function(msg) {
 	
 	message = JSON.parse(msg.data);
 	
+	//console.log("socket message: " + message["action"]);
+	
     switch(message["action"]) {
     case "placeSettlement":
         this.placeVertexDevelopment(message["data"]["x"], message["data"]["y"], "settlement", message["color"]);
@@ -165,6 +170,10 @@ Board.prototype.handleSocketMessage = function(msg) {
     	//console.log("updatePlayers");
     	this.loadPlayersJSON(message["players"]);
     	this.player_.load();
+    	break;
+    case "placeRobber":
+    	this.removeAllHexDevelopmentsByType("robber");
+    	this.placeHexDevelopment(message["data"]["x"], message["data"]["y"], "robber");
     	break;
     case "changeTradeOffer":
     case "startTrade":
@@ -279,6 +288,16 @@ Board.prototype.loadJSON = function(obj) {
 
     for(var i = 0; hexes && i < hexes.length; i++) {
 		var h = new Hex(hexes[i]["x"], hexes[i]["y"], hexes[i]["type"], hexes[i]["value"]);
+		
+		for(var j = 0; j < hexes[i]["developments"].length; j++) {
+			d = hexes[i]["developments"][j];
+			//console.log("edge development: " + d["color"]);
+			h.addDevelopment({
+			    model: d["type"],
+			    player: (d["color"] ? "player-" + d["color"] : null)
+			});
+		}
+		
         this.addHex(h);
 		hexdict[hexes[i]["id"]] = h;
         //console.log("added hex: " + hexes[i]["id"] + ":" + hexes[i]["type"]);
@@ -324,9 +343,48 @@ Board.prototype.setModelElement = function (modelName, svgEl, centerPosition) {
         "centerPosition": centerPosition
     };
 }
+Board.prototype.removeAllHexDevelopmentsByType = function(model) {
+	for(var i = 0; i < this.hex_.length; i++) {
+		var h = this.hex_[i];
+		var toremove = new Array();
+		
+		for(var j = 0; j < h.hexDevelopments_.length; j++) {
+			var hd = h.hexDevelopments_[j];
+			if(hd.model == model) {
+				toremove.push(hd);
+			}
+		}
+		
+		for(var j = 0; j < toremove.length; j++) {
+			h.removeDevelopment(toremove[j]);
+			Event.fire(this, "removeHexDevelopment", [h, toremove[j]])
+		}
+	}
+}
+Board.prototype.placeHexDevelopment = function(x, y, model, color) {
+	var h = null;
+	for(var i = 0; h == null && i < this.hex_.length; i++) {
+		h = this.hex_[i];
+		if(h.position_.x != x || h.position_.y != y)
+			h = null;
+	}
+	
+	if(h != null) {
+		var dev = {
+			"model": model,
+			"player": (color ? "player-" + color : null)
+		}
+		h.addDevelopment(dev);
+		Event.fire(this, "placeHexDevelopment", [h, dev]);
+		return true;
+	}
+	else {
+		return false;
+	}
+}
 Board.prototype.placeVertexDevelopment = function(x, y, model, color) {
     for(var i = 0; i < this.vertex_.length; i++) {
-        v = this.vertex_[i];
+        var v = this.vertex_[i];
         if(v.position_.x == x && v.position_.y == y) {
             v.vertexDevelopments_ = [];
             var dev = {
@@ -342,7 +400,7 @@ Board.prototype.placeVertexDevelopment = function(x, y, model, color) {
 }
 Board.prototype.placeEdgeDevelopment = function(x1, y1, x2, y2, model, color) {
     for(var i = 0; i < this.edge_.length; i++) {
-        e = this.edge_[i];
+        var e = this.edge_[i];
 		if(e.first_.x == x1 && e.first_.y == y1 && e.second_.x == x2 && e.second_.y == y2) {
 			e.edgeDevelopments_ = [];
 			var dev = {
@@ -548,7 +606,22 @@ Vertex.prototype.toJSON = function() {
 	return '{"x":'+this.position_.x+',"y":'+this.position_.y+'}';
 }
 
+Hex.prototype.addDevelopment = function(hexDevelopment) {
+	this.hexDevelopments_.push(hexDevelopment);
+}
+Hex.prototype.removeDevelopment = function(hexDevelopment) {
+	var hds = new Array();
+	for(var i = 0; i < this.hexDevelopments_.length; i++) {
+		var hd = this.hexDevelopments_[i];
+		if(hd !== hexDevelopment) {
+			hds.push(hd);
+		}
 
+		delete this.hexDevelopments_[i];
+	}
+	delete this.hexDevelopments_;
+	this.hexDevelopments_ = hds;
+}
 Vertex.prototype.addDevelopment = function (vertexDevelopment) {
     this.vertexDevelopments_.push(vertexDevelopment);
 }

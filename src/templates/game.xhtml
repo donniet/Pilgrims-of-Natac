@@ -50,7 +50,8 @@ function handleLoad() {
 	
 	var boardView = new BoardView(document.getElementById("board"), [
    	    {type: "settlement", element:document.getElementById("settlement-model"), center:{x:15,y:15}},
-   	    {type: "city", 		 element:document.getElementById("city-model"), 	  center:{x:25,y:15}}
+   	    {type: "city", 		 element:document.getElementById("city-model"), 	  center:{x:25,y:15}},
+   	    {type: "robber", 	 element:document.getElementById("robber-model"), 	  center:{x:40,y:30}}
    	]);
 	boardView.setBoard(board);
 	
@@ -72,6 +73,7 @@ function handleLoad() {
 	actionsView.setBoardView(boardView);
 	
 	Event.addListener(actionsView, "completeaction", function(action, data) {
+		console.log("data: " + data);
 		board.sendAction(action, data);
 	});
 	
@@ -82,7 +84,10 @@ function handleLoad() {
 	playerView1.setBoard(board);
 	
 	var resourcesView = new ResourcesView($("#pp-resources"));
+	resourcesView.setSelectMode(ResourcesView.SelectMode.Many);
 	resourcesView.setPlayer(board.getCurrentPlayer());
+	
+	actionsView.setResourceView(resourcesView);
 	
 	
 	var tradeView = new TradeView($("#trade-inner"));
@@ -195,6 +200,11 @@ $(document).ready(handleLoad);
 		                <line x1="15" y1="0" x2="15" y2="30" style="stroke:black;" />
 		                <line x1="30" y1="0" x2="30" y2="30" style="stroke:black;" />
 		            </g>
+		        </svg>
+		        <svg id="robber-model">
+		        	<g>
+		        		<circle cx="16" cy="16" r="15" style="stroke:black;fill:#444444;" />
+		        	</g>
 		        </svg>
 		    </g>
 		    

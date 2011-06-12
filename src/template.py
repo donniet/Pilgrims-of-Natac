@@ -57,6 +57,7 @@ class BoardTemplate(object):
         {"location":"vertex", "name":"settlement", "playerStart":5, "points":1, "cost":{"brick":1, "wool":1, "wheat":1, "wood":1}},
         {"location":"vertex", "name":"city", "playerStart":4, "points":2, "cost":{"ore":3, "wheat":2}},
         {"location":"edge", "name":"road", "playerStart":15, "points":0, "cost":{"brick":1, "wood":1}},
+        {"location":"hex", "name":"robber", "playerStart":0, "points":0, "cost":dict()},
     ]
     dice = [6,6]
     

@@ -8,6 +8,8 @@ function BoardView(boardElement, modelElements, options) {
 	this.boardElement_ = boardElement;
 	this.vertexDevListener_ = null;
 	this.edgeDevListener_ = null;
+	this.hexDevListener_ = null;
+	this.removeHexDevListener_ = null;
 	this.loadListener_ = null;
 	this.scale_ = 1.0;
 	
@@ -36,6 +38,8 @@ BoardView.prototype.setBoard = function(board) {
 	if(this.board_) {
 		Event.removeListenerById(this.board_, "placeVertexDevelopment", this.vertexDevListener_);
 		Event.removeListenerById(this.board_, "placeEdgeDevelopment", this.edgeDevListener_);
+		Event.removeListenerById(this.board_, "placeHexDevelopment", this.hexDevListener_);
+		Event.removeListenerById(this.board_, "removeHexDevelopment", this.removeHexDevListener_);
 		Event.removeListenerById(this.board_, "load", this.loadListener_);
 	}
 	
@@ -50,6 +54,12 @@ BoardView.prototype.setBoard = function(board) {
 	this.edgeDevListener_ = Event.addListener(board, "placeEdgeDevelopment", function() {
 		self.handlePlaceEdgeDevelopment.apply(self, arguments);
 	});
+	this.hexDevListener_ = Event.addListener(board, "placeHexDevelopment", function() {
+		self.handlePlaceHexDevelopment.apply(self, arguments);
+	});
+	this.removeHexDevListener_ = Event.addListener(board, "removeHexDevelopment", function() {
+		self.handleRemoveHexDevelopment.apply(self, arguments);
+	});
 	
 	this.loadListener_ = Event.addListener(board, "load", function() {
 		self.render();
@@ -62,9 +72,20 @@ BoardView.prototype.handlePlaceVertexDevelopment = function(vertex, development)
 		this.renderVertexDevelopment(vertex, development, vertex.svgEl_);
 	}
 }
+
 BoardView.prototype.handlePlaceEdgeDevelopment = function(edge, development) {
 	if (edge.svgEl_ ) {
 	    this.renderEdgeDevelopment(edge, development, edge.svgEl_);
+	}
+}
+BoardView.prototype.handlePlaceHexDevelopment = function(hex, development) {
+	if(hex.svgEl_) {
+		this.renderHexDevelopment(hex, development, hex.svgEl_);
+	}
+}
+BoardView.prototype.handleRemoveHexDevelopment = function(hex, development) {
+	if(hex.svgEl_ && development.svgEl_) {
+		this.removeHexDevelopment(hex, development, hex.svgEl_, development.svgEl_);
 	}
 }
 
@@ -138,7 +159,7 @@ BoardView.prototype.renderVertex = function (vertex, svgEl) {
     this.renderVertexHitArea(vertex, g);
 }
 BoardView.prototype.renderVertexDevelopment = function (vertex, vertexDevelopment, svgEl) {
-    var n = svgEl.firstChild
+    var n = svgEl.firstChild;
     for (; n && n.getAttribute("class") != "development-container"; n = n.nextSibling) { }
 
     if (!n) {
@@ -157,6 +178,39 @@ BoardView.prototype.renderVertexDevelopment = function (vertex, vertexDevelopmen
         newNode.setAttribute("class", "vertex-development " + vertexDevelopment.player);
         n.appendChild(newNode);
         vertexDevelopment.svgEl_ = newNode;
+    }
+}
+BoardView.prototype.removeHexDevelopment = function(hex, development, hexEl, devEl) {
+	var n = hexEl.firstChild;
+	for(; n && n.getAttribute("class") != "development-container"; n = n.nextSibling) {}
+	
+	n.removeChild(devEl);
+	development.svgEl_ = null;
+}
+BoardView.prototype.renderHexDevelopment = function(hex, hexDevelopment, svgEl) {
+	var n = svgEl.firstChild;
+	for(; n && n.getAttribute("class") != "development-container"; n = n.nextSibling) {}
+	
+	if(!n) {
+		n = document.createElementNS(this.svgns_, "g");
+        n.setAttribute("class", "development-container");
+        /*if (svgEl.firstChild) svgEl.insertBefore(n, svgEl.firstChild);
+        else */svgEl.appendChild(n);
+	}
+	
+	var model = null;
+	
+	var pp = this.hexCoords(hex.position_.x, hex.position_.y);
+	
+    if (model = this.modelElements_[hexDevelopment.model]) {
+        var newNode = model.svgElement.cloneNode(true);
+        var newPos = {"x":(pp[0].x + pp[1].x) / 2, "y":(pp[0].y + pp[4].y) / 2};
+        	    
+        newNode.setAttribute("x", newPos.x - model.centerPosition.x);
+        newNode.setAttribute("y", newPos.y - model.centerPosition.y);
+        newNode.setAttribute("class", "hex-development " + (hexDevelopment.player ? hexDevelopment.player : ""));
+        n.appendChild(newNode);
+        hexDevelopment.svgEl_ = newNode;
     }
 }
 BoardView.prototype.renderVertexHitArea = function (vertex, svgEl) {
@@ -322,6 +376,10 @@ BoardView.prototype.renderHex = function (hex, svgEl) {
 	    txt.setAttribute("y", (pp[0].y + pp[4].y) / 2 );
 	
 	    g.appendChild(txt);
+    }
+    
+    for (var i = 0; i < hex.hexDevelopments_.length; i++) {
+        this.renderHexDevelopment(hex, hex.hexDevelopments_[i], g);
     }
     
     g.appendChild(hit);

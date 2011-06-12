@@ -78,7 +78,7 @@ ul.resource-view>li {
 	-ms-transition: all 0.2s linear;
 	transition: all 0.2s linear;
 }
-ul.resource-view>li:hover {
+ul.resource-view>li:hover, ul.resource-view>li.resource-view-resource-selected {
 	padding-top:0;
 	padding-bottom:25px;
 }
