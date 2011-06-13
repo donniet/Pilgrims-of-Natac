@@ -49,6 +49,7 @@ Action.make = function(str) {
 	case "quit": return new Action("Quit", str);
 	case "discard": return new Action("Discard", str, Action.RequiredData.RESOURCESET);
 	case "placeRobber": return new Action("Place Robber", str, Action.RequiredData.HEX);
+	case "stealRandomResource": return new Action("Steal Resource", str, Action.RequiredData.VERTEX);
 	// replace default case with exception
 	default: return new Action(str, str);
 	}

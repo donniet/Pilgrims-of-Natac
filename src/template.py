@@ -50,7 +50,7 @@ class BoardTemplate(object):
         ("joining", []), 
         ("buildFirstSettlement", ["buildSettlement", "buildRoad"]), 
         ("buildSecondSettlement", ["buildSettlement", "buildRoad"]), 
-        ("main", ["rollDice", "discard", "moveRobber", "trade",  "playCard", "build"]), 
+        ("main", ["rollDice", "discard", "moveRobber", "stealRandomResource", "trade",  "playCard", "build"]), 
         ("complete", [])
     ]
     developments = [
