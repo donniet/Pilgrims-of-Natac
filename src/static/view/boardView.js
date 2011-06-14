@@ -378,6 +378,10 @@ BoardView.prototype.renderHex = function (hex, svgEl) {
 	    g.appendChild(txt);
     }
     
+    cont = svgEl.ownerDocument.createElementNS(this.svgns_, "g");
+    cont.setAttribute("class", "development-container");
+    g.appendChild(cont);
+    
     for (var i = 0; i < hex.hexDevelopments_.length; i++) {
         this.renderHexDevelopment(hex, hex.hexDevelopments_[i], g);
     }
