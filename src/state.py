@@ -832,12 +832,82 @@ class GameState(object):
         
         h.addDevelopment(None, "robber")
         
-        tp = gp.getTurnPhaseByName("stealRandomResource")
+        canSteal = False
+        singlePlayer = None
+        singlePlayerX = None
+        singlePlayerY = None
+        verts = h.getAdjecentVertexes()
+        for v in verts:
+            devs = v.getDevelopments()
+            for d in devs:
+                if d.color != color:
+                    canSteal = True
+                    if singlePlayer is None:
+                        singlePlayer = d.color
+                        singlePlayerX = v.x
+                        singlePlayerY = v.y
+                    elif singlePlayer != d.color:
+                        singlePlayer = None
+                        singlePlayerX = None
+                        singlePlayerY = None
+                    break
+            if canSteal:
+                break
+        
+        tp = None
+        
+        if canSteal and singlePlayer is None:
+            tp = gp.getTurnPhaseByName("stealRandomResource")
+        elif singlePlayer is not None:
+            stealPlayer = self.board.getPlayerByColor(singlePlayer)
+            if stealPlayer is None:
+                logging.info("no player found of color %s" % singlePlayer)
+                return ActionResponse(False, "No player found of color %s" % singlePlayer)
+            
+            ret = self.innerStealRandomResource(p, stealPlayer)
+            
+            if ret:
+                tp = gp.getTurnPhaseByName("build")
+            else:
+                logging.info("error stealing from lone player adjecent to hex")
+                return ActionResponse(False, "Error: Could not steal from adjecent player.")
+        else:
+            tp = gp.getTurnPhaseByName("build")
+        
         self.board.turnPhase = tp.order
         self.board.put()
         
         return ActionResponse(True)   
-    
+
+    def innerStealRandomResource(self, player, stealPlayer):
+        res = stealPlayer.getPlayerResourcesDict()
+        tot = 0
+        for _,amount in res.items():
+            tot += amount
+            
+        if tot == 0:
+            logging.info("no resources available to steal!")
+            
+            return True
+        
+        rand = random.randint(0, tot-1)
+        stolen = None
+        for resource,amount in res.items():
+            if amount >= rand:
+                stolen = resource
+                break
+            else:
+                rand -= amount
+                
+        if stolen is None:
+            logging.info("something went wrong-- random resource selection failed")
+            return False
+        
+        player.adjustResources(dict([[stolen, 1]]))
+        stealPlayer.adjustResources(dict([[stolen, -1]]))
+        
+        return True
+
     def stealRandomResource(self, user, x, y):
         p = self.board.getPlayer(user)
         if p is None: 
@@ -899,41 +969,16 @@ class GameState(object):
             logging.info("no player found of color %s" % stealColor)
             return ActionResponse(False, "No player found of color %s" % stealColor)
         
-        res = stealPlayer.getPlayerResourcesDict()
-        tot = 0
-        for _,amount in res.items():
-            tot += amount
-            
-        if tot == 0:
-            logging.info("no resources available to steal!")
-            
+        ret = self.innerStealRandomResource(p, stealPlayer)
+        
+        if ret:
             tp = gp.getTurnPhaseByName("build")
             self.board.turnPhase = tp.order
             self.board.put()
             
-            return ActionResponse(True, "That player has no resources to steal.")
-        
-        rand = random.randint(0, tot-1)
-        stolen = None
-        for resource,amount in res.items():
-            if amount >= rand:
-                stolen = resource
-                break
-            else:
-                rand -= amount
-                
-        if stolen is None:
-            logging.info("something went wrong-- random resource selection failed")
-            return ActionResponse(False, "There was an error selecting a resource...")
-        
-        p.adjustResources(dict([[stolen, 1]]))
-        stealPlayer.adjustResources(dict([[stolen, -1]]))
-        
-        tp = gp.getTurnPhaseByName("build")
-        self.board.turnPhase = tp.order
-        self.board.put()
-        
-        return ActionResponse(True, "Stole %s from the player on vertex %d,%d" % (stolen, x, y))
+            return ActionResponse(True, "Stole from the player on vertex %d,%d" % (x, y))
+        else:
+            return ActionResponse(False, "Error: Could not steal resources.")
 
     
     def placeSettlement(self, x, y, user):

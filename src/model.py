@@ -763,7 +763,7 @@ class Hex(db.Model):
         ret = []
         hexCoords = get_hex_coords(self.x, self.y)
         for p in hexCoords:
-            v = db.Query(Vertex).ancestor(self.parent()).filter("x =", p[0]).filter("y =",p[1]).get()
+            v = db.Query(Vertex).ancestor(self.parent()).filter("x =", p[0]).filter("y =", p[1]).get()
             if v: ret.append(v)
         return ret
             
