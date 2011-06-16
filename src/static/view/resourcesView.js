@@ -57,9 +57,11 @@ ResourcesView.prototype.setSelectMode = function(mode) {
 	Event.fire(this, "setselectmode", [mode]);
 }
 ResourcesView.prototype.handleResourceClick = function(resource, li) {
+	console.log("resourceview, resource click: " + resource);
 	switch(this.selectMode_) {
 	case ResourcesView.SelectMode.One:
-		Event.fire(self, "resourceclick", [resource]);
+		console.log("resourcesview, selectmode: one");
+		Event.fire(this, "resourceclick", [resource]);
 		break;
 	case ResourcesView.SelectMode.Many:
 		if(!li.__selected) {

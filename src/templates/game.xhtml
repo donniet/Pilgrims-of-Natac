@@ -101,7 +101,7 @@ function handleLoad() {
 		}
 		console.log("offerDict: " + offerDict);
 		console.log("json(offerDict): " + JSON.stringify(offerDict));
-		board.sendAction("changeTradeOffer", JSON.stringify(offerDict));
+		board.sendAction("changeTradeOffer", offerDict);
 	});
 	Event.addListener(tradeView, "changebankoffer", function(offer) {
 		var offerDict = new Object();
@@ -111,7 +111,7 @@ function handleLoad() {
 		}
 		console.log("offerDict: " + offerDict);
 		console.log("json(offerDict): " + JSON.stringify(offerDict));
-		board.sendAction("changeBankOffer", JSON.stringify(offerDict));
+		board.sendAction("changeBankOffer", offerDict); 
 	});
 
 	Event.addListener(tradeView, "acceptoffer", function(colorTo) {
