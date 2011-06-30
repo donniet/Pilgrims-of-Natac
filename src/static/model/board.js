@@ -290,7 +290,7 @@ Board.prototype.loadJSON = function(obj) {
     for(var i = 0; hexes && i < hexes.length; i++) {
 		var h = new Hex(hexes[i]["x"], hexes[i]["y"], hexes[i]["type"], hexes[i]["value"]);
 		
-		for(var j = 0; j < hexes[i]["developments"].length; j++) {
+		for(var j = 0; hexes[i]["developments"] && j < hexes[i]["developments"].length; j++) {
 			d = hexes[i]["developments"][j];
 			//console.log("edge development: " + d["color"]);
 			h.addDevelopment({
@@ -307,7 +307,7 @@ Board.prototype.loadJSON = function(obj) {
     for(var i = 0; edges && i < edges.length; i++) {
         var e = new Edge(edges[i]["x1"], edges[i]["y1"], edges[i]["x2"], edges[i]["y2"]);
 
-		for(var j = 0; j < edges[i]["developments"].length; j++) {
+		for(var j = 0; edges[i]["developments"] && j < edges[i]["developments"].length; j++) {
 			d = edges[i]["developments"][j];
 			//console.log("edge development: " + d["color"]);
 			e.addDevelopment({
@@ -321,7 +321,7 @@ Board.prototype.loadJSON = function(obj) {
     for(var i = 0; vertex && i < vertex.length; i++) {
 		var v = new Vertex(vertex[i]["x"], vertex[i]["y"]);
 
-		for(var j = 0; j < vertex[i]["developments"].length; j++) {
+		for(var j = 0; vertex[i]["developments"] && j < vertex[i]["developments"].length; j++) {
 			d = vertex[i]["developments"][j];
 			//console.log("development(" + vertex[i]["x"]+","+vertex[i]["y"]+")={"+d["type"]+","+d["color"]+"}");
 			v.addDevelopment({
@@ -569,6 +569,20 @@ Board.prototype.createAdjecencyMap = function () {
 	}
 }
 
+function Port(x, y, rules) {
+	this.position_ = { "x": typeof x == "undefined" ? 0 : x, "y": typeof y == "undefined" ? 0 : y };
+	this.rules = new Array();
+	for(var i = 0; rules && i < rules.length; i++) {
+		var r = rules[i];
+		this.rules.push(new TradingRule(r["name"], r["fromMatches"], r["toMatches"]));
+	}
+}
+
+function TradingRule(name, fromMatches, toMatches) {
+	this.name_ = typeof name == "undefined" ? "" : name;
+	this.fromMatches_ = new Array();
+	this.toMatches_ = new Array();
+}
 
 function Hex(x, y, hexType, value) {
     /* Hex vertexes will be: */

@@ -14,12 +14,15 @@ from template import BoardTemplate
 
 from events import EventHook
 
+def random_string(length):
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
  
 def create_game(user, template = BoardTemplate):
     #TODO: check for the unlikely case of this board key being a duplicate
     # generate board key
     
-    gameKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(8))
+    gameKey = random_string(8)
+    #gameKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(8))
     bt = template()
     
     logging.info("creating game %s" % (gameKey,))
@@ -69,7 +72,8 @@ class GameState(object):
         self.valid = (not self.board is None)
         
     def updateStateKey(self):
-        self.board.stateKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(16))
+        self.board.stateKey = random_string(16)
+        #self.board.stateKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(16))
         self.board.put()
         
     def getStateKey(self):
@@ -122,8 +126,9 @@ class GameState(object):
         
         # first check to see if we already have a reservation for this user
         r = self.board.getReservationByUser(reservedFor)
-        if r is None:                
-            reservationKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(8))
+        if r is None:
+            reservationKey = random_string(8)                
+            #reservationKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(8))
             self.board.addReservation(reservationKey, reservedFor, datetime.datetime.now() + datetime.timedelta(minutes=expirationMinutes))
         else:
             reservationKey = r.reservationKey
@@ -614,7 +619,8 @@ class GameState(object):
             if mustDiscard: 
                 tp = self.board.getCurrentGamePhase().getTurnPhaseByName("discard")
                 self.board.turnPhase = tp.order
-                discardKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(16))
+                discardKey = random_string(16)
+                #discardKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(16))
                 self.board.createDiscard(discardKey, playerDiscardMap)
             else:
                 tp = self.board.getCurrentGamePhase().getTurnPhaseByName("moveRobber")
@@ -1173,7 +1179,8 @@ class GameState(object):
         self.board.turnPhase = tp.order
         self.board.put()
         
-        tradeKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(16))
+        tradeKey = random_string(16)
+        #tradeKey = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(16))
         self.board.createTrade(tradeKey)
         return ActionResponse(True)
     
@@ -1432,8 +1439,18 @@ class GameState(object):
                 
 
     def getTradingRules(self, board, player):
-        #TODO: add port, merchant, and any other trading rules here
-        return self.board.getDefaultTradingRules()
+        rules = self.board.getDefaultTradingRules()
+        
+        devs = self.board.getDevelopmentsByColorAndLocation(player.color, "vertex")
+        for d in devs:
+            v = d.parent()
+            ports = v.getPorts()
+            for p in ports:
+                rules.extend(p.getTradingRules())
+        
+        return rules
+        
+        
 
     def getCurrentTrade(self):
         return self.board.getCurrentTrade()

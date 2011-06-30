@@ -9,27 +9,28 @@ class BoardTemplate(object):
     
     boardTemplate = dict(
         hexes = [
-            dict(x=0, y=2),
-            dict(x=3, y=1),
-            dict(x=6, y=0),
-            dict(x=9, y=1),
-            dict(x=12, y=2),
-            dict(x=12, y=4),
-            dict(x=12, y=6),
-            dict(x=9, y=7),
-            dict(x=6, y=8), 
-            dict(x=3, y=7),
-            dict(x=0, y=6),
-            dict(x=0, y=4),
+            {"x":0, "y":2},
+            {"x":3, "y":1},
+            {"x":6, "y":0},
+            {"x":9, "y":1},
+            {"x":12, "y":2},
+            {"x":12, "y":4},
+            {"x":12, "y":6},
+            {"x":9, "y":7},
+            {"x":6, "y":8},
+            {"x":3, "y":7},
+            {"x":0, "y":6},
+            {"x":0, "y":4},
             
-            dict(x=3, y=3),
-            dict(x=6, y=2),
-            dict(x=9, y=3),
-            dict(x=9, y=5),
-            dict(x=6, y=6),
-            dict(x=3, y=5),
             
-            dict(x=6, y=4),
+            {"x":3, "y":3},
+            {"x":6, "y":2},
+            {"x":9, "y":3},
+            {"x":9, "y":5},
+            {"x":6, "y":6},
+            {"x":3, "y":5},
+            
+            {"x":6, "y":4},
         ]
     )
     hexValues = [5, 2, 6, 3, 8, 10, 9, 12, 11, 4, 8, 10, 9, 4, 5, 6, 3, 11]
@@ -39,12 +40,22 @@ class BoardTemplate(object):
                 "fields", "fields", "fields", "fields",
                 "forest", "forest", "forest", "forest",
                 "desert"]
+    ports = [(2,1,"ore"), (2,1,"brick"), (2,1,"wool"), (2,1,"wheat"), (2,1,"wood"), (3,1), (3,1), (3,1), (3,1)]
+    portLocations = [(10,1),(12,1),
+                     (14,2),(15,3),
+                     (15,5),(14,6),
+                     (13,8),(12,9),
+                     (9,10),(7,10),
+                     (4,9), (3,8),
+                     (1,6), (0,5),
+                     (0,3), (1,2),
+                     (4,1), (6,1)]
     resources = ["ore", "brick", "wool", "wheat", "wood"]
     hexProduces = ["mountains", "hills", "pasture", "fields", "forest"]
     colors = ["red", "blue", "green", "orange", "white", "brown"]
     minimumPlayers = 2
     #set to 5 for testing
-    pointsNeededToWin = 5
+    pointsNeededToWin = 10
     
     gamePhases = [
         ("joining", []), 
@@ -64,6 +75,7 @@ class BoardTemplate(object):
     def __init__(self):
         
         random.shuffle(self.hexTypes)
+        random.shuffle(self.ports)
         
     def instantiateModel(self, gameKey, owner):
         board = model.Board()
@@ -80,7 +92,30 @@ class BoardTemplate(object):
         
         board.put()
         
-        fourForOneRule = model.TradingRule(parent=board, name="4 for 1")
+        for i in xrange(len(self.ports)):
+            pd = self.ports[i]
+            for j in [2*i, 2*i+1]:
+                p = model.Port(parent=board, x=self.portLocations[j][0], y=self.portLocations[j][1])
+                p.put()
+                
+                if len(pd) > 2:
+                    rule = model.TradingRule(parent=p, name="%s port" % pd[2])
+                    rule.put()
+                    
+                    fromMatch = model.TradeMatch(parent=rule, any=False, resource=pd[2], count=pd[0], to=False)
+                    fromMatch.put()
+                    toMatch = model.TradeMatch(parent=rule, any=True, count=pd[1], to=True)
+                    toMatch.put()
+                else:
+                    rule = model.TradingRule(parent=p, name="general port")
+                    rule.put()
+                    
+                    fromMatch = model.TradeMatch(parent=rule, any=True, count=pd[0], to=False)
+                    fromMatch.put()
+                    toMatch = model.TradeMatch(parent=rule, any=True, count=pd[1], to=True)
+                    toMatch.put()
+        
+        fourForOneRule = model.TradingRule(parent=board, name="4 for 1", default=True)
         fourForOneRule.put();
         
         fourMatch = model.TradeMatch(parent=fourForOneRule, any=True, count=4, to=False)
@@ -151,9 +186,6 @@ class BoardTemplate(object):
                 vert.put()
                 found["%(x)d-%(y)d" % v] = True
         
-        
-        
-        # TODO: edges
         #Ensure that y1 < y2 if x1 = x2 else x1 < x2
         for e in edges:
             if e["x1"] > e["x2"] or (e["x1"] == e["x2"] and e["y1"] > e["y2"]):
@@ -170,6 +202,4 @@ class BoardTemplate(object):
             if found.get("%(x1)d-%(y1)d-%(x2)d-%(y2)d" % e, None) == None:
                 edge = model.Edge(parent=board, x1=e["x1"], y1=e["y1"], x2=e["x2"], y2=e["y2"])
                 edge.put()
-                found["%(x1)d-%(y1)d-%(x2)d-%(y2)d" % e] = True
-    
-   
+                found["%(x1)d-%(y1)d-%(x2)d-%(y2)d" % e] = True 

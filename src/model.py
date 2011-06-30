@@ -103,6 +103,7 @@ class TradeMatch(db.Model):
 
 class TradingRule(db.Model):
     name = db.StringProperty()
+    default = db.BooleanProperty(default=False)
     
     def adjustAllRules(self, matchRules, resource_dict, neg = True):
         if len(matchRules) == 0:
@@ -354,6 +355,13 @@ class PlayerDiscard(db.Model):
     requiredDiscards = db.IntegerProperty()
     discardComplete = db.BooleanProperty(default=False)
 
+class Port(db.Model):
+    x = db.IntegerProperty()
+    y = db.IntegerProperty()
+    
+    def getTradingRules(self):
+        return db.Query(TradingRule).ancestor(self).fetch(100)
+
 class Board(db.Model):
     dateTimeCreated = db.DateTimeProperty()
     dateTimeStarted = db.DateTimeProperty()
@@ -385,7 +393,7 @@ class Board(db.Model):
         return db.Query(LogEntry).ancestor(self).order("-dateTime").fetch(limit, offset)
     
     def getDefaultTradingRules(self):
-        return db.Query(TradingRule).ancestor(self).fetch(100)
+        return db.Query(TradingRule).ancestor(self).filter("default =", True).fetch(100)
     
     def save(self, callback):
         rpc = db.create_rpc(deadline=5, callback=callback)
@@ -590,7 +598,16 @@ class Board(db.Model):
     def getDevelopmentsByColorAndType(self, color, type):
         return db.Query(Development).ancestor(self).filter("color =", color).filter("type =", type).fetch(100)
         
+    def getDevelopmentsByColorAndLocation(self, color, location):
+        dts = db.Query(DevelopmentType).ancestor(self).filter("location =", location).fetch(100)
+        devs = []
+        for dt in dts:
+            devs.extend(self.getDevelopmentsByColorAndType(color, dts.name))
+        
+        return devs
     
+    def getPorts(self):
+        return db.Query(Port).ancestor(self).fetch(1000)
     
     def dump(self, fp):
         json.dump(self, fp, cls=BoardEncoder) 
@@ -806,6 +823,9 @@ class Vertex(db.Model):
         d.put()
         return d
     
+    def getPorts(self):
+        return db.Query(Port).ancestor(self.parent()).filter("x =", self.x).filter("y =", self.y).fetch(100)
+            
     def getAdjecentEdges(self):
         edges   = db.Query(Edge).ancestor(self.parent()).filter('x1 = ', self.x).filter('y1 = ', self.y).fetch(25)
         edges_r = db.Query(Edge).ancestor(self.parent()).filter('x2 = ', self.x).filter('y2 = ', self.y).fetch(25)
@@ -962,7 +982,29 @@ class BoardEncoder(json.JSONEncoder):
                 dice = obj.dice,
                 developmentTypes=db.Query(DevelopmentType).ancestor(obj),
                 log=obj.getLogEntries(20,0),
-                currentTrade=obj.getCurrentTrade()
+                currentTrade=obj.getCurrentTrade(),
+                ports=obj.getPorts(),
+                defaultTradingRules = obj.getDefaultTradingRules()
+            )
+        elif isinstance(obj, Port):
+            return dict(
+                x = obj.x,
+                y = obj.y,
+                rules = obj.getTradingRules()
+            )
+        elif isinstance(obj, TradingRule):
+            return dict(
+                name = obj.name,
+                default = obj.default,
+                fromMatches = db.Query(TradeMatch).ancestor(obj).filter("to =", False).fetch(100),
+                toMatches = db.Query(TradeMatch).ancestor(obj).filter("to =", True).fetch(100)
+            )
+        elif isinstance(obj, TradeMatch):
+            return dict(
+                resource = obj.resource,
+                count = obj.count,
+                any = obj.any,
+                to = obj.to
             )
         elif isinstance(obj, Trade):
             return dict(
@@ -1012,27 +1054,37 @@ class BoardEncoder(json.JSONEncoder):
         elif isinstance(obj, users.User):
             return dict(nickname=obj.nickname(), email=obj.email())
         elif isinstance(obj, Hex):
-            return dict(
+            ret = dict(
                 x = obj.x,
                 y = obj.y,
                 type = obj.type,
-                value = obj.value,
-                developments = db.Query(Development).ancestor(obj)
+                value = obj.value
             )
+            devs = db.Query(Development).ancestor(obj).fetch(100)
+            if devs is not None and len(devs) > 0:
+                ret["developments"] = devs
+                
+            return ret
         elif isinstance(obj, Edge):
-            return dict(
+            ret = dict(
                 x1 = obj.x1,
                 y1 = obj.y1,
                 x2 = obj.x2,
-                y2 = obj.y2,
-                developments = db.Query(Development).ancestor(obj)
+                y2 = obj.y2
             )
+            devs = db.Query(Development).ancestor(obj).fetch(100)
+            if devs is not None and len(devs) > 0:
+                ret["developments"] = devs
+                
+            return ret
         elif isinstance(obj, Vertex):
-            return dict(
-                x = obj.x,
-                y = obj.y,
-                developments = db.Query(Development).ancestor(obj)
-            )
+            ret = dict(x = obj.x, y = obj.y)
+            devs = db.Query(Development).ancestor(obj).fetch(100)
+            
+            if devs is not None and len(devs) > 0:
+                ret["developments"] = devs
+                
+            return ret
         elif isinstance(obj, Development):
             return dict(
                 color = obj.color, #TODO: what if obj.player is None?
