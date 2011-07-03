@@ -92,10 +92,11 @@ class BoardTemplate(object):
         
         board.put()
         
+        
         for i in xrange(len(self.ports)):
             pd = self.ports[i]
             for j in [2*i, 2*i+1]:
-                p = model.Port(parent=board, x=self.portLocations[j][0], y=self.portLocations[j][1])
+                p = model.Port(parent=board, x=self.portLocations[j][0], y=self.portLocations[j][1], order=j)
                 p.put()
                 
                 if len(pd) > 2:

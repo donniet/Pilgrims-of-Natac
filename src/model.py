@@ -358,6 +358,7 @@ class PlayerDiscard(db.Model):
 class Port(db.Model):
     x = db.IntegerProperty()
     y = db.IntegerProperty()
+    order = db.IntegerProperty()
     
     def getTradingRules(self):
         return db.Query(TradingRule).ancestor(self).fetch(100)
@@ -607,7 +608,7 @@ class Board(db.Model):
         return devs
     
     def getPorts(self):
-        return db.Query(Port).ancestor(self).fetch(1000)
+        return db.Query(Port).ancestor(self).order("order").fetch(1000)
     
     def dump(self, fp):
         json.dump(self, fp, cls=BoardEncoder) 

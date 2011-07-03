@@ -129,10 +129,12 @@ BoardView.prototype.handleMouseWheel = function(e) {
 	e.returnValue = false;
 }
 BoardView.prototype.renderBoard = function (svgEl) {
+	this.calculateCenter();
+	
     this.renderHexes(svgEl);
     this.renderEdges(svgEl);
-    this.renderVertexes(svgEl);
     this.renderPorts(svgEl);
+    this.renderVertexes(svgEl);
     
     var self = this;
     if(window.addEventListener) 
@@ -141,6 +143,19 @@ BoardView.prototype.renderBoard = function (svgEl) {
     window.onmousewheel = function(e) { self.handleMouseWheel(e); };
     
     
+}
+BoardView.prototype.calculateCenter = function() {
+	var sx = 0, sy = 0;
+    for (var i = 0; i < this.board_.vertex_.length; i++) {
+    	var v = this.board_.vertex_[i];
+    	
+    	sx += v.position_.x;
+    	sy += v.position_.y;
+    }
+    
+    if(this.board_.vertex_.length > 0) {
+    	this.centerPosition_ = {x: sx/this.board_.vertex_.length, y: sy/this.board_.vertex_.length};
+    }
 }
 BoardView.prototype.renderPorts = function(svgEl) {
 	var prev = null;
@@ -152,19 +167,9 @@ BoardView.prototype.renderPorts = function(svgEl) {
 	}
 }
 BoardView.prototype.renderVertexes = function (svgEl) {
-	
-	var sx = 0, sy = 0;
     for (var i = 0; i < this.board_.vertex_.length; i++) {
     	var v = this.board_.vertex_[i];
-    	
-    	sx += v.position_.x;
-    	sy += v.position_.y;
-    	
         this.renderVertex(v, svgEl);
-    }
-    
-    if(this.board_.vertex_.length > 0) {
-    	this.centerPosition_ = {x: sx/this.board_.vertex_.length, y: sy/this.board_.vertex_.length};
     }
 }
 BoardView.prototype.renderVertex = function (vertex, svgEl) {
