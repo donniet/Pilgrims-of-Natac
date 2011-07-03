@@ -602,7 +602,7 @@ class Board(db.Model):
         dts = db.Query(DevelopmentType).ancestor(self).filter("location =", location).fetch(100)
         devs = []
         for dt in dts:
-            devs.extend(self.getDevelopmentsByColorAndType(color, dts.name))
+            devs.extend(self.getDevelopmentsByColorAndType(color, dt.name))
         
         return devs
     

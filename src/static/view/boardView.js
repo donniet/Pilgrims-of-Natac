@@ -13,6 +13,8 @@ function BoardView(boardElement, modelElements, options) {
 	this.loadListener_ = null;
 	this.scale_ = 1.0;
 	
+	this.centerPosition_ = {x:0,y:0};
+	
 	this.modelElements_ = new Object();
 	for(var i = 0; modelElements && i < modelElements.length; i++) {
 		var m = modelElements[i];
@@ -103,8 +105,8 @@ BoardView.prototype.setModelElement = function (modelName, svgEl, centerPosition
 
 /* transform grid coords to pixel coords */
 BoardView.prototype.c = function (/* int */nx, /* int */ny) {
-    var fx = 0.5 * nx * this.edgeLength_;
-    var fy = this.sqrt3over2_ * ny * this.edgeLength_;
+    var fx = 0.5 * (nx + 1.2) * this.edgeLength_;
+    var fy = this.sqrt3over2_ * (ny + 0.5) * this.edgeLength_;
 
     return {
         "x": fx + this.marginLeft_,
@@ -130,6 +132,7 @@ BoardView.prototype.renderBoard = function (svgEl) {
     this.renderHexes(svgEl);
     this.renderEdges(svgEl);
     this.renderVertexes(svgEl);
+    this.renderPorts(svgEl);
     
     var self = this;
     if(window.addEventListener) 
@@ -139,9 +142,29 @@ BoardView.prototype.renderBoard = function (svgEl) {
     
     
 }
+BoardView.prototype.renderPorts = function(svgEl) {
+	var prev = null;
+	for(var i = 0; i < this.board_.port_.length; i++) {
+		var p = this.board_.port_[i];
+		this.renderPort(p, i % 2 == 1 ? prev : null, svgEl);
+		
+		prev = p;
+	}
+}
 BoardView.prototype.renderVertexes = function (svgEl) {
+	
+	var sx = 0, sy = 0;
     for (var i = 0; i < this.board_.vertex_.length; i++) {
-        this.renderVertex(this.board_.vertex_[i], svgEl);
+    	var v = this.board_.vertex_[i];
+    	
+    	sx += v.position_.x;
+    	sy += v.position_.y;
+    	
+        this.renderVertex(v, svgEl);
+    }
+    
+    if(this.board_.vertex_.length > 0) {
+    	this.centerPosition_ = {x: sx/this.board_.vertex_.length, y: sy/this.board_.vertex_.length};
     }
 }
 BoardView.prototype.renderVertex = function (vertex, svgEl) {
@@ -157,6 +180,77 @@ BoardView.prototype.renderVertex = function (vertex, svgEl) {
     }
 
     this.renderVertexHitArea(vertex, g);
+}
+BoardView.prototype.renderPort = function(port, prev, svgEl) {
+	var g = port.svgEl_;
+	if(!g) {
+		g = document.createElementNS(this.svgns_, "g");
+		g.setAttribute("class", "port");
+		svgEl.appendChild(g);
+		port.svgEl_ = g;
+	}
+	
+
+	var pp = this.c(port.position_.x, port.position_.y);
+	
+    var c = svgEl.ownerDocument.createElementNS(this.svgns_, "circle");
+    c.setAttribute("cx", pp.x);
+    c.setAttribute("cy", pp.y);
+    c.setAttribute("r", this.edgeLength_ * 0.125);
+    g.appendChild(c);
+    
+    var tps = [null, {x:2,y:0}, {x:1, y:-1}];
+    
+    if(prev != null && (prev.resource == port.resource || (prev.resource == null && port.resource == null))) {
+    	var g = document.createElementNS(this.svgns_, "g");
+    	g.setAttribute("class", "port-marker port-" + (port.resource_ ? port.resource_ : "any"));
+    	    	
+    	var pps = [port.position_, prev.position_];
+    	pps.sort(function(a,b) { return a.x < b.x ? -1 : 1; });
+    	
+    	var p3 = tps[pps[1].x - pps[0].x];
+    	
+    	var ref = pps[0];
+    	
+    	if(pps[0].x > this.centerPosition_.x && p3.x < 0) p3.x = -p3.x;
+    	else if(pps[0].x < this.centerPosition_.x && p3.x > 1) { ref = pps[1]; p3.x = -p3.x; }
+    	if(pps[0].y > this.centerPosition_.y && p3.y < 0) p3.y = -p3.y;
+    	else if(pps[0].y < this.centerPosition_.y && p3.y > 0) p3.y = -p3.y;
+    	
+    	p3.x += ref.x;
+    	p3.y += ref.y;    	
+    	
+    	var pp = this.c(p3.x, p3.y);
+    	var pp0 = this.c(pps[0].x, pps[0].y);
+    	var pp1 = this.c(pps[1].x, pps[1].y);
+    	
+    	var l1 = svgEl.ownerDocument.createElementNS(this.svgns_, "line");
+    	l1.setAttribute("x1", pp.x); l1.setAttribute("x2", 0.875 * (pp0.x - pp.x) + pp.x);
+    	l1.setAttribute("y1", pp.y); l1.setAttribute("y2", 0.875 * (pp0.y - pp.y) + pp.y);
+    	g.appendChild(l1);
+    	
+    	var l2 = svgEl.ownerDocument.createElementNS(this.svgns_, "line");
+    	l2.setAttribute("x1", pp.x); l2.setAttribute("x2", 0.875 * (pp1.x - pp.x) + pp.x);
+    	l2.setAttribute("y1", pp.y); l2.setAttribute("y2", 0.875 * (pp1.y - pp.y) + pp.y);
+    	g.appendChild(l2);
+    	
+    	var c = svgEl.ownerDocument.createElementNS(this.svgns_, "circle");
+    	c.setAttribute("cx", pp.x);
+    	c.setAttribute("cy", pp.y);
+    	c.setAttribute("r", this.edgeLength_ * 0.2);
+    	g.appendChild(c);
+    	
+    	var txt = svgEl.ownerDocument.createElementNS(this.svgns_, "text");
+	    txt.appendChild(svgEl.ownerDocument.createTextNode(port.ratio_.p + ":" + port.ratio_.q));
+
+	    txt.setAttribute("x", pp.x);
+	    txt.setAttribute("y", pp.y);
+	
+	    g.appendChild(txt);
+	    
+	    svgEl.appendChild(g);
+    	
+    }
 }
 BoardView.prototype.renderVertexDevelopment = function (vertex, vertexDevelopment, svgEl) {
     var n = svgEl.firstChild;

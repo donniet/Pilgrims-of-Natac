@@ -16,6 +16,64 @@ body {
     overflow:hidden;
 }
 
+#board {
+	-webkit-transition: all 0.2s linear;
+	-moz-transition: all 0.2s linear;
+	-o-transition: all 0.2s linear;
+	-ms-transition: all 0.2s linear;
+	transition: all 0.2s linear;
+}
+
+.port circle {
+	stroke: #000000;
+	stroke-dasharray: 3,2;
+	stroke-width: 2px;
+	fill: none;
+}
+.port-marker circle {
+	stroke: #000000;
+	stroke-dasharray:none;
+	stroke-width: 2px;
+	fill:none;
+}
+.port-marker text {
+	font-family:"Fanwood", serif;
+	font-size:20px;
+	stroke:#000000;
+	fill:#000000;
+	dominant-baseline:central;
+	text-anchor:middle;
+}
+.port-marker line {
+	stroke: #000000;
+	stroke-width: 2px;
+	marker-end:url(#Triangle);
+}
+
+
+.port-wool circle {
+    fill: #BFE882;
+}
+
+.port-wheat circle {
+    fill: #FFEF4F;
+}
+
+.port-wood circle {
+    fill: #00932C;
+}
+
+.port-ore circle {
+    fill: #787887;
+}
+
+.port-brick circle {
+    fill: firebrick;
+}
+.port-any circle {
+	fill: white;
+}
+
 /* TRADE */
 
 #trade {

@@ -74,6 +74,7 @@ function Board(token, services) {
     this.availableActions_ = new Array();
     this.log_ = new Array();
     this.resources_ = new Array();
+    this.port_ = new Array();
     
     this.player_ = new Player(services);
     this.trade_ = new Trade(services);
@@ -331,6 +332,14 @@ Board.prototype.loadJSON = function(obj) {
 		}
 		this.addVertex(v);
     }
+    var ports = obj["ports"];
+    for(var i = 0; ports && i < ports.length; i++) {
+    	var p = new Port(ports[i]["x"], ports[i]["y"], ports[i]["rules"][0]["fromMatches"][0]["resource"], 0, 1);
+    	p.ratio_.p = ports[i]["rules"][0]["fromMatches"][0]["count"];
+    	p.ratio_.q = ports[i]["rules"][0]["toMatches"][0]["count"];
+    	this.addPort(p);
+    }
+    
     var log = obj["log"];
     for(var i = 0; log && i < log.length; i++) {
     	this.log_.push(log[i]);
@@ -441,6 +450,11 @@ Board.prototype.addEdge = function(edge) {
     this.edge_.push(edge);
     edge.board_ = this;
     return edge;
+}
+Board.prototype.addPort = function(port) {
+	this.port_.push(port);
+	port.board_ = this;
+	return port;
 }
 
 
@@ -569,13 +583,12 @@ Board.prototype.createAdjecencyMap = function () {
 	}
 }
 
-function Port(x, y, rules) {
-	this.position_ = { "x": typeof x == "undefined" ? 0 : x, "y": typeof y == "undefined" ? 0 : y };
-	this.rules = new Array();
-	for(var i = 0; rules && i < rules.length; i++) {
-		var r = rules[i];
-		this.rules.push(new TradingRule(r["name"], r["fromMatches"], r["toMatches"]));
-	}
+
+function Port(x, y, resource, ratioP, ratioQ) {
+	this.position_ = {"x":x, "y":y};
+	this.resource_ = resource;
+	this.ratio_ = {"p":ratioP, "q":ratioQ};
+	this.board_ = null;
 }
 
 function TradingRule(name, fromMatches, toMatches) {
@@ -643,7 +656,6 @@ Vertex.prototype.addDevelopment = function (vertexDevelopment) {
 Edge.prototype.addDevelopment = function (development) {
     this.edgeDevelopments_.push(development);
 }
-
 
 
 
