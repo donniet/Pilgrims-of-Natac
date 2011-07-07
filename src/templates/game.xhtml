@@ -15,6 +15,7 @@
 <script type="text/javascript" src="/static/lib/jquery-ext.js"></script>
 <script type="text/javascript" src="/_ah/channel/jsapi"></script>
 <script type="text/javascript" src="/static/lib/event.js"></script>
+<script type="text/javascript" src="/static/lib/transform2d.js"></script>
 <script type="text/javascript" src="/static/model/player.js"></script>
 <script type="text/javascript" src="/static/model/board.js"></script>
 <script type="text/javascript" src="/static/model/trade.js"></script>
@@ -27,6 +28,7 @@
 <script type="text/javascript" src="/static/view/layout.js"></script>
 <script type="text/javascript" src="/static/view/resourcesView.js"></script>
 <script type="text/javascript" src="/static/view/tradeView.js"></script>
+<script type="text/javascript" src="/static/view/dashboardView.js"></script>
 <script type="text/javascript" src="/static/chat.js"></script>
 <script type="text/javascript">//<![CDATA[
 
@@ -53,42 +55,22 @@ function handleLoad() {
    	    {type: "city", 		 element:document.getElementById("city-model"), 	  center:{x:25,y:15}},
    	    {type: "robber", 	 element:document.getElementById("robber-model"), 	  center:{x:40,y:30}}
    	]);
+	Event.addListener(boardView, "scale", function(w,h) {
+		var svg = document.getElementById("svg");
+		svg.setAttribute("width", 1.1*w + "px");
+		svg.setAttribute("height", 1.1*h + "px");
+	});
 	boardView.setBoard(board);
 	
-
-	var diceView = new DiceView($("#diceView"));
-	diceView.setBoard(board);
+	var dash = new DashboardView($("#pp"), {% ifequal color None %} false {% else %} true {% endifequal %} );
+	dash.setBoard(board);
+	dash.setBoardView(boardView);
 	
-	var playerListView = new PlayerListView($("#players"));
-	playerListView.setBoard(board);
+
+	layout.addItem($("#toolbar"), "top", 30);
 
 	var chatview = new ChatView($("#chat"));
 	chatview.setBoard(board);
-	
-	layout.addItem($("#toolbar"), "top", 30);
-	
-	{% ifnotequal color None %}
-	var actionsView = new ActionsView($("#actions"));
-	actionsView.setBoard(board);
-	actionsView.setBoardView(boardView);
-	
-	Event.addListener(actionsView, "completeaction", function(action, data) {
-		console.log("data: " + data);
-		board.sendAction(action, data);
-	});
-	
-	var errorView = new ErrorView($("#errorMessage"));
-	errorView.setBoard(board);
-	
-	var playerView1 = new PlayerView($("#pp"));
-	playerView1.setBoard(board);
-	
-	var resourcesView = new ResourcesView($("#pp-resources"));
-	resourcesView.setSelectMode(ResourcesView.SelectMode.Many);
-	resourcesView.setPlayer(board.getCurrentPlayer());
-	
-	actionsView.setResourceView(resourcesView);
-	
 	
 	var tradeView = new TradeView($("#trade-inner"));
 	tradeView.setBoard(board);
@@ -126,16 +108,15 @@ function handleLoad() {
 	});
 		
 	layout.addItem($("#trade"), "left", 100, true);	
-	
-    {% endifnotequal %}
-    
+	    
     layout.addItem($("#pp"), "right", 350, true);
-	layout.addItem($("#chat"), "bottom", 200, true, true);
+	layout.addItem($("#chat"), "bottom", 200, true, false);
 	
     layout.addItem(document.getElementById("game-board"), "center");
 	
 	board.load();
-			    
+
+	/*
     $("#reserveLink").click(function() {
     	var responder = board.reserve( $('#reserveEmail').val());
     	Event.addListener(responder, "reserved", function() {
@@ -146,7 +127,198 @@ function handleLoad() {
     		$('#reserveMessage').text("Invitation Failed to Send.");
     	});		
     });  
+	*/
 }
+
+
+$(function() {
+	//TODO: must transform coordinates before translation or scaling...
+	var trans = new Transform2d();	
+	
+	var mousedown_ = false;
+	var pageX_ = 0;
+	var pageY_ = 0;
+	
+	var blockerDiv = null;
+	
+	var board = document.getElementById("board");
+
+	
+	var mousemove = function(e) {
+		if(mousedown_) {
+			move(e.pageX, e.pageY);	
+			
+			e.preventDefault();
+			e.stopPropagation();	
+		}	
+	}
+	var mouseout = function(e) {
+		if(mousedown_) {
+			move(e.pageX, e.pageY);
+			stopmove();
+			
+			mousedown_ = false;
+		}	
+	}
+	var mousedown = function(e) {
+		if(e.which == 2) {
+			mousedown_ = true;
+			startmove(e.pageX, e.pageY);
+			
+			e.preventDefault();
+			e.stopPropagation();
+		}	
+	}
+	
+	var stopmove = function() {
+		if(blockerDiv) {
+			blockerDiv.remove();
+			blockerDiv = null;
+		}
+	}
+	var startmove = function(pageX, pageY) {		
+		//$(".chat-window").append("<p>" + trans.toString() + "</p>");
+		pageX_ = pageX;
+		pageY_ = pageY;
+
+		blockerDiv = $("<div style='position:absolute;top:0px;left:0px;height:100%;width:100%;'/>");
+		$("#game-board").append(blockerDiv);
+		
+		blockerDiv.mouseup(mouseout);
+		blockerDiv.mouseout(mouseout);
+		blockerDiv.mousemove(mousemove);
+		blockerDiv.mousedown(mousedown);
+	}
+	var move = function(pageX, pageY) {
+		//$(".chat-window").append("<p>px,py " + pageX + "," + pageY + "</p>");
+		//$(".chat-window").append("<p>epx,epy " + e.pageX + "," + e.pageY + "</p>");
+		
+		var x = pageX - pageX_;
+		var y = pageY - pageY_;
+		
+
+		//var vec = trans.transformFrom([x,y]);
+		
+		trans.translate(x,y);
+		
+		board.setAttribute("transform", trans.toSVG());
+					
+		
+		pageX_ = pageX;
+		pageY_ = pageY;
+	}
+	
+	var zoom = function(scale, pageX, pageY) {
+		var pos = $(board.parentNode.parentNode).position();
+		
+		var x = pageX - pos.left;
+		var y = pageY - pos.top;
+					
+		
+		trans.translate(-x, -y).scale(scale).translate(x,y);
+		
+		/*
+		
+		$(".chat-window").append("<p>pos " + pos.left + "," + pos.top + "</p>");
+		$(".chat-window").append("<p>e " + e.pageX + "," + e.pageY + "</p>");
+		$(".chat-window").append("<p>x,y " + x + "," + y + "</p>");
+		$(".chat-window").append("<p>dx,dy " + dx + "," + dy + "</p>");
+		$(".chat-window").append("<p>x0,y0 " + vec0[0] + "," + vec0[1] + "</p>");
+		
+		var vec0 = trans.transformFrom([0,0]);
+		var vec1 = trans.transformFrom([x,y]);
+		
+		var dx = vec1[0] - vec0[0];
+		var dy = vec1[1] - vec0[1];
+		
+		var vec2 = trans.transformFrom([dx, dy]);
+		
+		trans.translate(vec2[0],vec2[1]);
+		*/
+		
+		board.setAttribute("transform", trans.toSVG());
+	}
+
+	var mousewheel = function(e) {
+		var delta = 0;
+		if(e.detail) {
+			delta = -e.detail/3;
+		}
+		
+		if(delta != 0) {
+			var scale = Math.pow(1.1, delta);
+			
+			zoom(scale, e.pageX, e.pageY);
+		}
+		
+		if (e.preventDefault)
+	        e.preventDefault();
+		e.returnValue = false;
+	}
+	
+	var touchstart = function(e) {
+		e.preventDefault();
+		if(e.touches.length == 1) {
+			startmove(e.touches[0].pageX, e.touches[0].pageY);
+		}
+	}
+	var touchmove = function(e) {
+		e.preventDefault();
+		if(e.touches.length == 1) {
+			move(e.touches[0].pageX, e.touches[0].pageY);
+		}
+		
+	}
+	var touchend = function(e) {
+		e.preventDefault();
+		if(e.touches.length == 1) {
+			move(e.touches[0].pageX, e.touches[0].pageY);
+			stopmove();
+		}
+		
+	}
+	var touchcancel = function(e) {
+		
+	}
+	
+	var moztouchstart = function(e) {
+		e.preventDefault();
+		startmove(e.pageX, e.pageY);
+	}
+	var moztouchmove = function(e) {
+		e.preventDefault();
+		move(e.pageX, e.pageY);
+	}
+	var moztouchend = function(e) {
+		e.preventDefault();
+		move(e.pageX, e.pageY);
+		stopmove();
+	}
+	
+    if(window.addEventListener) 
+    	window.addEventListener('DOMMouseScroll', function(e) {mousewheel(e);}, false);
+    
+    if(document.addEventListener) {
+    	document.addEventListener('touchstart', touchstart, false);
+    	document.addEventListener('touchmove', touchmove, false);
+    	document.addEventListener('touchend', touchend, false);
+    	document.addEventListener('touchcancel', touchcancel, false);
+    	
+    	document.addEventListener('MozTouchDown', moztouchstart, false);
+    	document.addEventListener('MozTouchMove', moztouchmove, false);
+    	document.addEventListener('MozTouchUp', moztouchend, false);
+    }
+	    
+    window.onmousewheel = mousewheel;
+	
+    
+	$("#game-board").mousedown(mousedown);
+	
+	
+	
+})
+
+
 
 
 $(document).ready(handleLoad);
@@ -160,7 +332,7 @@ $(document).ready(handleLoad);
         <a href="/">Back to Game List</a>
         
         {% if isOwner %}
-        	<input id="reserveEmail" type="text" /> <a href="javascript:void(0)" id="reserveLink">Reserve</a> <span id="reserveMessage"></span>
+        	<!--  <input id="reserveEmail" type="text" /> <a href="javascript:void(0)" id="reserveLink">Reserve</a> <span id="reserveMessage"></span> -->
         {% endif %}
         
         <span id="current-player">
@@ -223,29 +395,7 @@ $(document).ready(handleLoad);
 </div> <!-- game-board -->
 
 
-<div id="pp">
-
-     {% ifnotequal color None %}
-     <h3>Resources</h3>
-     <div id="pp-resources">
-    
-     </div>
-     
-     <h3>Bonuses</h3>
-     <div id="pp-bonuses"></div>
-     
-     <h3>Developments</h3>
-     <div id="pp-developments"></div>
-     
-     <h3>Actions</h3>
-	<div id="actions"></div>
-	
-	{% endifnotequal %}
-	<h3 id="diceView"></h3>
-	
-	<h3>Players</h3>
-	<div id="players"></div>
-</div>
+<div id="pp"></div>
 
 <div id="chat"></div>
 

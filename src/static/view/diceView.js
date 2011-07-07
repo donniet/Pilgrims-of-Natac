@@ -28,6 +28,7 @@ DiceView.prototype.setBoard = function(board) {
 	});
 }
 DiceView.prototype.render = function() {
+	console.log("rendering dice.");
 	this.diceElement_.empty();
 	
 	var dice = this.board_.getDice();

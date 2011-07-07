@@ -47,7 +47,7 @@ body {
 .port-marker line {
 	stroke: #000000;
 	stroke-width: 2px;
-	marker-end:url(#Triangle);
+	/*marker-end:url(#Triangle);*/
 }
 
 
@@ -294,11 +294,12 @@ ul.resource-view>li:hover, ul.resource-view>li.resource-view-resource-selected {
 	position:absolute;
 	top:0;
 	left:0;
-	height:100%;
+	bottom:29px;
 	width:100%;
 	overflow:auto;
 	font-family:"Fanwood";
 	font-size:16px;
+	color:white;
 }
 div.size-bar {
 	/*background-color: rgba(0,0,0,0.5); */
@@ -514,15 +515,13 @@ div.size-bar-attach-bottom {
 }
 
 #game-board {
-    float: left;
-    width: 800px;
-    /*background-color: #CCC; */
+    overflow:hidden;
 }
 
 #toolbar {
     width: 100%;
     background-color: #000;
-    padding-top: 5px;
+    /*padding-top: 5px;*/
     color: #FFF;
     height:22px;
     font-family:Fanwood;

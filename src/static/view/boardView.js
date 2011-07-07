@@ -12,6 +12,8 @@ function BoardView(boardElement, modelElements, options) {
 	this.removeHexDevListener_ = null;
 	this.loadListener_ = null;
 	this.scale_ = 1.0;
+	this.totalWidth_ = 0;
+	this.totalHeight_ = 0;
 	
 	this.centerPosition_ = {x:0,y:0};
 	
@@ -95,6 +97,8 @@ BoardView.prototype.render = function() {
 	while(this.boardElement_.firstChild)
 		this.boardElement_.removeChild(this.boardElement_.firstChild);
 	this.renderBoard(this.boardElement_);
+	
+	Event.fire(this, "scale", [this.scale_ * this.totalWidth_, this.scale_ * this.totalHeight_]);
 }
 BoardView.prototype.setModelElement = function (modelName, svgEl, centerPosition) {
     this.modelElements_[modelName] = {
@@ -127,6 +131,8 @@ BoardView.prototype.handleMouseWheel = function(e) {
 	if (e.preventDefault)
         e.preventDefault();
 	e.returnValue = false;
+	
+	Event.fire(this, "scale", [this.scale_ * this.totalWidth_, this.scale_ * this.totalHeight_]);
 }
 BoardView.prototype.renderBoard = function (svgEl) {
 	this.calculateCenter();
@@ -136,12 +142,13 @@ BoardView.prototype.renderBoard = function (svgEl) {
     this.renderPorts(svgEl);
     this.renderVertexes(svgEl);
     
+    /*
     var self = this;
     if(window.addEventListener) 
     	window.addEventListener('DOMMouseScroll', function(e) {self.handleMouseWheel(e);}, false);
     
     window.onmousewheel = function(e) { self.handleMouseWheel(e); };
-    
+    */
     
 }
 BoardView.prototype.calculateCenter = function() {
@@ -229,6 +236,9 @@ BoardView.prototype.renderPort = function(port, prev, svgEl) {
     	var pp0 = this.c(pps[0].x, pps[0].y);
     	var pp1 = this.c(pps[1].x, pps[1].y);
     	
+    	if(pp.x > this.totalWidth_) this.totalWidth_ = pp.x;
+    	if(pp.y > this.totalHeight_) this.totalHeight_ = pp.y;
+    	
     	var l1 = svgEl.ownerDocument.createElementNS(this.svgns_, "line");
     	l1.setAttribute("x1", pp.x); l1.setAttribute("x2", 0.875 * (pp0.x - pp.x) + pp.x);
     	l1.setAttribute("y1", pp.y); l1.setAttribute("y2", 0.875 * (pp0.y - pp.y) + pp.y);
@@ -245,13 +255,27 @@ BoardView.prototype.renderPort = function(port, prev, svgEl) {
     	c.setAttribute("r", this.edgeLength_ * 0.2);
     	g.appendChild(c);
     	
+    	var gtext = svgEl.ownerDocument.createElementNS(this.svgns_, "g");
+    	    	
     	var txt = svgEl.ownerDocument.createElementNS(this.svgns_, "text");
+    	prevp = this.c(prev.position_.x, prev.position_.y);
+    	portp = this.c(port.position_.x, port.position_.y);
+    	delta = {"x":-prevp.x + portp.x, "y":-prevp.y + portp.y};
+    	
+    	r = Math.sqrt(delta.x*delta.x + delta.y*delta.y);
+    	if(r > 0.01) {
+    		delta.x = delta.x / r;
+    		delta.y = delta.y / r;
+    		
+    		txt.setAttribute("transform", "matrix(" + delta.x + "," + delta.y + "," + (-delta.y) + "," + delta.x + ",0,0)");
+    		//txt.setAttribute("transform", "rotate(45)");
+    	}
+    	
 	    txt.appendChild(svgEl.ownerDocument.createTextNode(port.ratio_.p + ":" + port.ratio_.q));
 
-	    txt.setAttribute("x", pp.x);
-	    txt.setAttribute("y", pp.y);
-	
-	    g.appendChild(txt);
+	    gtext.setAttribute("transform", "translate(" + pp.x + "," + pp.y + ")");
+	    gtext.appendChild(txt);
+	    g.appendChild(gtext);
 	    
 	    svgEl.appendChild(g);
     	

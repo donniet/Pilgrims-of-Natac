@@ -166,20 +166,36 @@ class BoardTemplate(object):
         
         for h in hexes:
             hc = [
-                dict(x=h.x+1, y=h.y+0),
-                dict(x=h.x+3, y=h.y+0),
-                dict(x=h.x+4, y=h.y+1),
-                dict(x=h.x+3, y=h.y+2),
-                dict(x=h.x+1, y=h.y+2),
-                dict(x=h.x+0, y=h.y+1),
+                {"x":h.x+1, "y":h.y+0},
+                {"x":h.x+3, "y":h.y+0},
+                {"x":h.x+4, "y":h.y+1},
+                {"x":h.x+3, "y":h.y+2},
+                {"x":h.x+1, "y":h.y+2},
+                {"x":h.x+0, "y":h.y+1},
             ]
             # push the first edge
-            edges.append(dict(hex=h, x1=hc[0]["x"], y1=hc[0]["y"], x2=hc[5]["x"], y2=hc[5]["y"]))
+            edges.append({
+                "hex":h, 
+                "x1":hc[0]["x"], 
+                "y1":hc[0]["y"], 
+                "x2":hc[5]["x"], 
+                "y2":hc[5]["y"]
+            })
             
             for i in range(len(hc)):
                 if(i > 0):
-                    edges.append(dict(hex=h, x1=hc[i]["x"], y1=hc[i]["y"], x2=hc[i-1]["x"], y2=hc[i-1]["y"]))
-                vertex.append(dict(hex=h, x=hc[i]["x"], y=hc[i]["y"]))
+                    edges.append({
+                        "hex":h, 
+                        "x1":hc[i]["x"], 
+                        "y1":hc[i]["y"], 
+                        "x2":hc[i-1]["x"], 
+                        "y2":hc[i-1]["y"]
+                    })
+                vertex.append({
+                    "hex":h, 
+                    "x":hc[i]["x"], 
+                    "y":hc[i]["y"]
+                })
             
         for v in vertex:
             if found.get("%(x)d-%(y)d" % v, None) == None:
