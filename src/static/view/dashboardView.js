@@ -31,9 +31,6 @@ DashboardView.prototype.setBoard = function(board) {
 		this.el_.append("<h3>Actions</h3>");
 		var actionsEl = $("<div id='actions'/>");
 		this.el_.append(actionsEl);
-		
-		var diceEl = $("<h3 id='diceView'/>");
-		this.el_.append(diceEl);
 	
 	}
 	
@@ -55,9 +52,6 @@ DashboardView.prototype.setBoard = function(board) {
 		this.resourcesView_.setPlayer(board.getCurrentPlayer());
 		
 		this.actionsView_.setResourceView(this.resourcesView_);
-		
-		this.diceView_ = new DiceView(diceEl);
-		this.diceView_.setBoard(board);
 	}
 	
 	this.playersView_ = new PlayerListView(playersEl);

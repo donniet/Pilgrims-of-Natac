@@ -1,11 +1,16 @@
 
-function BoardView(boardElement, modelElements, options) {
+
+function BoardView(boardContainer, modelElements, options) {
 	this.svgns_ = "http://www.w3.org/2000/svg";
 	this.edgeLength_ = !options || typeof options.edgeLength == "undefined" ? 85 : options.edegeLength;
 	this.sqrt3over2_ = Math.sqrt(3)/2;
     this.marginLeft_ = 20;
     this.marginTop_ = 20;
-	this.boardElement_ = boardElement;
+	this.boardElement_ = null;
+	this.diceElement_ = null;
+	this.dicePosition_ = "bottom right";
+	this.diceView_ = null;
+	this.boardContainer_ = boardContainer;
 	this.vertexDevListener_ = null;
 	this.edgeDevListener_ = null;
 	this.hexDevListener_ = null;
@@ -94,9 +99,35 @@ BoardView.prototype.handleRemoveHexDevelopment = function(hex, development) {
 }
 
 BoardView.prototype.render = function() {
+	this.diceElement_ = $("<div/>");
+	this.diceElement_.css("position", "absolute");
+	var pos = this.dicePosition_.split(" ");
+	for(var i = 0; i < pos.length; i++) {
+		this.diceElement_.css(pos[i], "0");
+	}
+	
+	this.boardContainer_.append(this.diceElement_);
+	this.diceView_ = new DiceView(this.diceElement_);
+	this.diceView_.setBoard(this.board_);	
+	
+	var svg = document.createElementNS(this.svgns_, "svg");
+	svg.setAttribute("version", "1.1");
+	svg.setAttribute("baseProfile", "full");
+	svg.setAttribute("width", "100%");
+	svg.setAttribute("height", "100%");
+	svg.setAttribute("id", "svg");
+	
+	this.boardElement_ = document.createElementNS(this.svgns_, "g");
+	this.boardElement_.setAttribute("id", "board");
+	
+	svg.appendChild(this.boardElement_);
+	$(this.boardContainer_).append(svg);		
+	
 	while(this.boardElement_.firstChild)
 		this.boardElement_.removeChild(this.boardElement_.firstChild);
 	this.renderBoard(this.boardElement_);
+	
+	enableBoardPanZoom(this.boardElement_, this.boardContainer_);
 	
 	Event.fire(this, "scale", [this.scale_ * this.totalWidth_, this.scale_ * this.totalHeight_]);
 }
@@ -625,5 +656,186 @@ BoardView.prototype._clearHighlight = function(svgEl) {
 	cname = cname.replace("highlighted", "");
 	svgEl.setAttribute("class", cname);
 //	svgEl.style.fill = "inherit";
+}
+
+
+function enableBoardPanZoom(board, boardContainer) {
+	var trans = new Transform2d();	
+	
+	var mousedown_ = false;
+	var pageX_ = 0;
+	var pageY_ = 0;
+	
+	var blockerDiv = null;
+	
+	var mousemove = function(e) {
+		if(mousedown_) {
+			move(e.pageX, e.pageY);	
+			
+			e.preventDefault();
+			e.stopPropagation();	
+		}	
+	}
+	var mouseout = function(e) {
+		if(mousedown_) {
+			move(e.pageX, e.pageY);
+			stopmove();
+			
+			mousedown_ = false;
+		}	
+	}
+	var mousedown = function(e) {
+		if(e.which == 2) {
+			mousedown_ = true;
+			startmove(e.pageX, e.pageY);
+			
+			e.preventDefault();
+			e.stopPropagation();
+		}	
+	}
+	
+	var stopmove = function() {
+		if(blockerDiv) {
+			blockerDiv.remove();
+			blockerDiv = null;
+		}
+	}
+	var startmove = function(pageX, pageY) {		
+		//$(".chat-window").append("<p>" + trans.toString() + "</p>");
+		pageX_ = pageX;
+		pageY_ = pageY;
+
+		blockerDiv = $("<div style='position:absolute;top:0px;left:0px;height:100%;width:100%;'/>");
+		boardContainer.append(blockerDiv);
+		
+		blockerDiv.mouseup(mouseout);
+		blockerDiv.mouseout(mouseout);
+		blockerDiv.mousemove(mousemove);
+		blockerDiv.mousedown(mousedown);
+	}
+	var move = function(pageX, pageY) {
+		//$(".chat-window").append("<p>px,py " + pageX + "," + pageY + "</p>");
+		//$(".chat-window").append("<p>epx,epy " + e.pageX + "," + e.pageY + "</p>");
+		
+		var x = pageX - pageX_;
+		var y = pageY - pageY_;
+		
+
+		//var vec = trans.transformFrom([x,y]);
+		
+		trans.translate(x,y);
+		
+		board.setAttribute("transform", trans.toSVG());
+					
+		
+		pageX_ = pageX;
+		pageY_ = pageY;
+	}
+	
+	var zoom = function(scale, pageX, pageY) {
+		var pos = $(board.parentNode.parentNode).position();
+		
+		var x = pageX - pos.left;
+		var y = pageY - pos.top;
+					
+		
+		trans.translate(-x, -y).scale(scale).translate(x,y);
+		
+		/*
+		
+		$(".chat-window").append("<p>pos " + pos.left + "," + pos.top + "</p>");
+		$(".chat-window").append("<p>e " + e.pageX + "," + e.pageY + "</p>");
+		$(".chat-window").append("<p>x,y " + x + "," + y + "</p>");
+		$(".chat-window").append("<p>dx,dy " + dx + "," + dy + "</p>");
+		$(".chat-window").append("<p>x0,y0 " + vec0[0] + "," + vec0[1] + "</p>");
+		
+		var vec0 = trans.transformFrom([0,0]);
+		var vec1 = trans.transformFrom([x,y]);
+		
+		var dx = vec1[0] - vec0[0];
+		var dy = vec1[1] - vec0[1];
+		
+		var vec2 = trans.transformFrom([dx, dy]);
+		
+		trans.translate(vec2[0],vec2[1]);
+		*/
+		
+		board.setAttribute("transform", trans.toSVG());
+	}
+
+	var mousewheel = function(e) {
+		var delta = 0;
+		if(e.detail) {
+			delta = -e.detail/3;
+		}
+		
+		if(delta != 0) {
+			var scale = Math.pow(1.1, delta);
+			
+			zoom(scale, e.pageX, e.pageY);
+		}
+		
+		if (e.preventDefault)
+	        e.preventDefault();
+		e.returnValue = false;
+	}
+	
+	var touchstart = function(e) {
+		e.preventDefault();
+		if(e.touches.length == 1) {
+			startmove(e.touches[0].pageX, e.touches[0].pageY);
+		}
+	}
+	var touchmove = function(e) {
+		e.preventDefault();
+		if(e.touches.length == 1) {
+			move(e.touches[0].pageX, e.touches[0].pageY);
+		}
+		
+	}
+	var touchend = function(e) {
+		e.preventDefault();
+		if(e.touches.length == 1) {
+			move(e.touches[0].pageX, e.touches[0].pageY);
+			stopmove();
+		}
+		
+	}
+	var touchcancel = function(e) {
+		
+	}
+	
+	var moztouchstart = function(e) {
+		e.preventDefault();
+		startmove(e.pageX, e.pageY);
+	}
+	var moztouchmove = function(e) {
+		e.preventDefault();
+		move(e.pageX, e.pageY);
+	}
+	var moztouchend = function(e) {
+		e.preventDefault();
+		move(e.pageX, e.pageY);
+		stopmove();
+	}
+	
+    if(window.addEventListener) 
+    	window.addEventListener('DOMMouseScroll', mousewheel, false);
+    
+    if(document.addEventListener) {
+    	document.addEventListener('touchstart', touchstart, false);
+    	document.addEventListener('touchmove', touchmove, false);
+    	document.addEventListener('touchend', touchend, false);
+    	document.addEventListener('touchcancel', touchcancel, false);
+    	
+    	document.addEventListener('MozTouchDown', moztouchstart, false);
+    	document.addEventListener('MozTouchMove', moztouchmove, false);
+    	document.addEventListener('MozTouchUp', moztouchend, false);
+    }
+	    
+    window.onmousewheel = mousewheel;
+	
+    
+    boardContainer.mousedown(mousedown);
 }
 
